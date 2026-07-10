@@ -1,0 +1,438 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+:root {
+  --gold: #C59B27;
+  --dark-gold: #8E6E1B;
+  --bg: #FAF5DC; /* Dashboard background is light gold */
+  --card: #FFFDF4; /* Sidebar and cards are pale warm gold */
+  --text: #051429; /* Text is dark blue */
+  --title-text: #030E20; /* Title text is dark blue */
+  --completed: #FFD6D6;
+  --border: rgba(197, 155, 39, 0.2);
+  --prio-high: #FF4D4D;
+  --prio-med: #FFA500;
+  --prio-low: #4CAF50;
+  --shadow: 0 8px 30px rgba(11, 31, 58, 0.05);
+}
+
+.dark {
+  --gold: #F8E9A1;
+  --dark-gold: #C59B27;
+  --bg: #030C1E; /* Deep dark blue background */
+  --card: #0B1F3A; /* Dark blue card/sidebar */
+  --text: #F8E9A1; /* Light gold text */
+  --title-text: #FDF2B5; /* Light gold title text */
+  --completed: rgba(255, 77, 77, 0.15);
+  --border: rgba(248, 233, 161, 0.15);
+  --prio-high: #FF4D4D;
+  --prio-med: #FFA500;
+  --prio-low: #4CAF50;
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+}
+
+body {
+  background-color: var(--bg) !important;
+  color: var(--text) !important;
+  font-family: 'Inter', sans-serif !important;
+  transition: background-color 0.5s ease, color 0.5s ease;
+}
+
+/* --- GLOBAL THEME INHERITANCE RULES --- */
+
+/* Day Mode / Light Mode overrides */
+html:not(.dark) {
+  background-color: var(--bg) !important;
+  color: var(--text) !important;
+}
+
+html:not(.dark) body {
+  background-color: var(--bg) !important;
+  color: var(--text) !important;
+}
+
+/* Sidebar and Header in Day Mode */
+html:not(.dark) aside,
+html:not(.dark) header {
+  background-color: var(--card) !important;
+  border-color: var(--border) !important;
+}
+
+/* Any text that is gray/slate in day mode should be dark blue to match user requirement: "the text is dark blue" */
+html:not(.dark) .text-gray-800,
+html:not(.dark) .text-gray-700,
+html:not(.dark) .text-gray-600,
+html:not(.dark) .text-gray-500,
+html:not(.dark) .text-slate-900,
+html:not(.dark) .text-slate-800,
+html:not(.dark) .text-slate-700,
+html:not(.dark) h1,
+html:not(.dark) h2,
+html:not(.dark) h3,
+html:not(.dark) h4,
+html:not(.dark) h5,
+html:not(.dark) h6,
+html:not(.dark) p,
+html:not(.dark) span:not(.material-icons):not(.text-red-500):not(.text-emerald-700):not(.text-amber-500),
+html:not(.dark) label,
+html:not(.dark) td,
+html:not(.dark) th,
+html:not(.dark) div:not(.bg-gold-500):not(.bg-red-500):not(.bg-emerald-500):not(.text-white) {
+  color: var(--text) !important;
+}
+
+/* Day Mode Background elements */
+html:not(.dark) .bg-white,
+html:not(.dark) .bg-white\/85,
+html:not(.dark) .bg-white\/80,
+html:not(.dark) .bg-gray-50,
+html:not(.dark) .bg-gray-100,
+html:not(.dark) .bg-slate-50,
+html:not(.dark) .bg-slate-100,
+html:not(.dark) .glass-panel {
+  background-color: var(--card) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+/* Day Mode inputs */
+html:not(.dark) input,
+html:not(.dark) textarea,
+html:not(.dark) select {
+  background-color: var(--bg) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+/* Keep gold buttons/elements text legible (white) */
+html:not(.dark) button.bg-gold-500,
+html:not(.dark) button.bg-\[\#C59B27\],
+html:not(.dark) .bg-gold-500 *,
+html:not(.dark) .bg-\[\#C59B27\] * {
+  color: #ffffff !important;
+}
+
+/* Welcome Banner in Day Mode: "the dashboard is light gold and the text is dark blue" */
+html:not(.dark) .bg-gradient-to-r {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+}
+html:not(.dark) .bg-gradient-to-r * {
+  color: var(--text) !important;
+}
+
+/* Day Mode calendar cells */
+html:not(.dark) .calendar-day-cell {
+  background-color: var(--card) !important;
+}
+html:not(.dark) .calendar-day-cell:hover {
+  background-color: rgba(197, 155, 39, 0.1) !important;
+}
+
+/* Day Mode sidebar item active state */
+html:not(.dark) .sidebar-item.active {
+  background-color: rgba(197, 155, 39, 0.15) !important;
+  color: #C59B27 !important;
+  border-right: 4px solid #C59B27 !important;
+}
+html:not(.dark) .sidebar-item.active * {
+  color: #C59B27 !important;
+}
+
+
+/* ======================================================== */
+/* Night Mode / Dark Mode overrides */
+.dark {
+  background-color: var(--bg) !important;
+  color: var(--text) !important;
+}
+
+.dark body {
+  background-color: var(--bg) !important;
+  color: var(--text) !important;
+}
+
+/* Sidebar and Header in Night Mode: dark blue color */
+.dark aside,
+.dark header {
+  background-color: var(--card) !important; /* `#0B1F3A` dark blue */
+  border-color: var(--border) !important;
+}
+
+.dark aside * {
+  color: var(--text) !important; /* `#F8E9A1` light gold */
+}
+
+/* Active sidebar item in Night Mode: text is light gold */
+.dark .sidebar-item.active {
+  background-color: rgba(248, 233, 161, 0.12) !important;
+  color: var(--text) !important;
+  border-right: 4px solid var(--text) !important;
+}
+.dark .sidebar-item.active * {
+  color: var(--text) !important;
+}
+
+/* Dashboard cards, tables, panels in Night Mode: dark blue, text is light gold */
+.dark .bg-white,
+.dark .bg-white\/85,
+.dark .bg-white\/80,
+.dark .bg-gray-50,
+.dark .bg-gray-100,
+.dark .bg-slate-50,
+.dark .bg-slate-100,
+.dark .glass-panel,
+.dark .bg-\[\#112240\],
+.dark .bg-\[\#112240\]\/80,
+.dark .bg-\[\#0c1a30\] {
+  background-color: var(--card) !important; /* `#0B1F3A` dark blue */
+  border-color: var(--border) !important;
+  color: var(--text) !important; /* `#F8E9A1` light gold */
+}
+
+/* Table rows/lists in Night Mode */
+.dark .task-card {
+  background-color: var(--card) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+
+/* Night Mode inputs */
+.dark input,
+.dark textarea,
+.dark select,
+.dark .bg-slate-900\/50,
+.dark .dark\:bg-\[\#0c1a30\] {
+  background-color: var(--bg) !important; /* `#030C1E` dark blue */
+  border-color: var(--border) !important;
+  color: var(--text) !important; /* `#F8E9A1` light gold */
+}
+
+/* Any standard text in night mode is light gold */
+.dark .text-gray-800,
+.dark .text-gray-700,
+.dark .text-gray-600,
+.dark .text-gray-500,
+.dark .text-slate-900,
+.dark .text-slate-800,
+.dark .text-slate-700,
+.dark .text-white,
+.dark .dark\:text-white,
+.dark .dark\:text-slate-300,
+.dark .dark\:text-gray-200,
+.dark .dark\:text-gray-300,
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark h5,
+.dark h6,
+.dark p,
+.dark span:not(.material-icons):not(.text-red-500):not(.text-emerald-400):not(.text-emerald-700):not(.text-amber-400),
+.dark label,
+.dark td,
+.dark th {
+  color: var(--text) !important; /* `#F8E9A1` light gold */
+}
+
+.dark .text-gray-400,
+.dark .dark\:text-slate-400 {
+  color: rgba(248, 233, 161, 0.7) !important; /* slightly opaque light gold */
+}
+
+/* Welcome Banner in Night Mode: "the color is dark blue the text is light gold" */
+.dark .bg-gradient-to-r {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+}
+.dark .bg-gradient-to-r * {
+  color: var(--text) !important;
+}
+
+/* Night Mode calendar cells */
+.dark .calendar-day-cell {
+  background-color: var(--card) !important;
+  border-color: var(--border) !important;
+}
+.dark .calendar-day-cell:hover {
+  background-color: rgba(248, 233, 161, 0.08) !important;
+}
+
+/* Custom rounded card shadow */
+.card-shadow {
+  box-shadow: var(--shadow) !important;
+}
+
+/* Sidebar customized style */
+.sidebar-item {
+  transition: all 0.2s ease;
+}
+
+.sidebar-item:hover {
+  background: rgba(253, 249, 226, 0.5) !important;
+  color: #C59B27 !important;
+}
+
+.dark .sidebar-item:hover {
+  background: rgba(212, 175, 55, 0.1) !important;
+  color: #FFD700 !important;
+}
+
+.sidebar-item.active {
+  background-color: #FDF9E2 !important;
+  color: #C59B27 !important;
+  font-weight: 600;
+  border-right: 4px solid #C59B27 !important;
+}
+
+.dark .sidebar-item.active {
+  background-color: rgba(212, 175, 55, 0.15) !important;
+  color: #FFD700 !important;
+  border-right: 4px solid #FFD700 !important;
+}
+
+/* Glassmorphism utility */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.dark .glass-panel {
+  background: rgba(17, 34, 64, 0.7);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+/* Inputs, Textareas, Selects */
+input, textarea, select {
+  transition: all 0.2s ease;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: var(--dark-gold) !important;
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2) !important;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.3);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 175, 55, 0.5);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 215, 0, 0.2);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 215, 0, 0.4);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.4);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+/* Draggable & Dragging classes */
+.draggable {
+  cursor: grab;
+}
+
+.draggable:active {
+  cursor: grabbing;
+}
+
+.dragging {
+  opacity: 0.5;
+  transform: scale(0.98);
+  border: 2px dashed var(--dark-gold) !important;
+  background-color: rgba(214, 175, 55, 0.05) !important;
+}
+
+/* Task Completion Card Background and Transitions */
+.task-card-completed-light {
+  background-color: var(--completed) !important;
+  border-color: rgba(255, 77, 77, 0.2) !important;
+  opacity: 0.75;
+  color: #8E8E93 !important;
+}
+
+.dark .task-card-completed-dark {
+  background-color: var(--completed) !important;
+  border-color: rgba(255, 59, 48, 0.3) !important;
+  opacity: 0.75;
+  color: rgba(255, 215, 0, 0.5) !important;
+}
+
+/* Google-style calendar cell decorations */
+.calendar-day-cell {
+  background: rgba(255, 255, 255, 0.6);
+  transition: all 0.2s ease;
+}
+
+.calendar-day-cell:hover {
+  background: rgba(214, 175, 55, 0.08);
+}
+
+.dark .calendar-day-cell {
+  background: rgba(17, 34, 64, 0.4);
+}
+
+.dark .calendar-day-cell:hover {
+  background: rgba(255, 215, 0, 0.05);
+}
+
+.calendar-day-today {
+  border: 2px solid var(--dark-gold) !important;
+  background-color: rgba(214, 175, 55, 0.05) !important;
+}
+
+/* Priority Indicator Badges - Soft Premium Pastels */
+.prio-badge-high {
+  background-color: rgba(255, 77, 77, 0.1) !important;
+  color: #FF4D4D !important;
+}
+
+.prio-badge-medium {
+  background-color: rgba(255, 165, 0, 0.1) !important;
+  color: #FFA500 !important;
+}
+
+.prio-badge-low {
+  background-color: rgba(76, 175, 80, 0.1) !important;
+  color: #4CAF50 !important;
+}
+
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  aside, header, #ai-chat-fab, #ai-chat-panel, .modal-close-btn, #toasts-container {
+    display: none !important;
+  }
+}

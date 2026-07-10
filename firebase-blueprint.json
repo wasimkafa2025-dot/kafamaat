@@ -1,0 +1,31 @@
+{
+  "entities": {
+    "Task": {
+      "title": "Task",
+      "description": "A productivity task in TaskFlow Pro",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "task": { "type": "string" },
+        "description": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "month": { "type": "string" },
+        "priority": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "completedAt": { "type": "string" },
+        "tags": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "type", "task", "priority", "status", "createdAt", "userId"]
+    }
+  },
+  "firestore": {
+    "/tasks/{taskId}": {
+      "schema": { "$ref": "Task" },
+      "description": "Collection of synchronized tasks"
+    }
+  }
+}

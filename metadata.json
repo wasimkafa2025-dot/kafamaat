@@ -1,0 +1,6 @@
+{
+  "name": "Daily Task Management",
+  "description": "A premium daily task management system with real-time multi-device database synchronization and automatic Telegram alert reminders.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
