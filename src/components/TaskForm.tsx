@@ -68,46 +68,82 @@ export const TaskForm: React.FC<TaskFormProps> = ({
       return;
     }
 
-    try {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.lang = speechLang;
-      recognition.interimResults = false;
+    setSpeechError('Activating mic...');
 
-      recognition.onstart = () => {
-        setIsListening(true);
-        setSpeechError('');
-      };
+    const startRecognition = () => {
+      try {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.lang = speechLang;
+        recognition.interimResults = false;
 
-      recognition.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error);
-        if (event.error === 'not-allowed') {
-          setSpeechError('Mic access denied');
-        } else {
-          setSpeechError(`Error: ${event.error}`);
-        }
+        recognition.onstart = () => {
+          setIsListening(true);
+          setSpeechError('');
+        };
+
+        recognition.onerror = (event: any) => {
+          console.error('Speech recognition error:', event.error);
+          if (event.error === 'not-allowed') {
+            setSpeechError('Mic access denied');
+          } else if (event.error === 'no-speech') {
+            setSpeechError('No speech detected');
+          } else if (event.error === 'language-not-supported' || event.error === 'param-error') {
+            setSpeechError('Lang not supported');
+            if (speechLang === 'km-KH') {
+              // Try falling back to English automatically
+              setSpeechError('Khmer unsupported, switching to EN...');
+              setSpeechLang('en-US');
+              localStorage.setItem('taskflow_speech_lang', 'en-US');
+            }
+          } else {
+            setSpeechError(`Error: ${event.error}`);
+          }
+          setIsListening(false);
+        };
+
+        recognition.onend = () => {
+          setIsListening(false);
+        };
+
+        recognition.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript;
+          if (transcript) {
+            setDescription(prev => {
+              const trimmed = prev.trim();
+              return trimmed ? `${trimmed} ${transcript}` : transcript;
+            });
+          }
+        };
+
+        recognitionRef.current = recognition;
+        // Keep globally in window to prevent aggressive WebKit/Safari garbage collection
+        (window as any)._activeSpeechRecognition = recognition;
+        recognition.start();
+      } catch (err) {
+        console.error('Failed to start speech recognition:', err);
+        setSpeechError('Failed to start');
         setIsListening(false);
-      };
+      }
+    };
 
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        if (transcript) {
-          setDescription(prev => {
-            const trimmed = prev.trim();
-            return trimmed ? `${trimmed} ${transcript}` : transcript;
-          });
-        }
-      };
-
-      recognitionRef.current = recognition;
-      recognition.start();
-    } catch (err) {
-      console.error('Failed to start speech recognition:', err);
-      setIsListening(false);
+    // Ask for microphone permissions first to ensure mobile hardware initialization compatibility (Safari / Chrome iOS)
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then((stream) => {
+          // Stop all tracks of the stream immediately to free the hardware
+          stream.getTracks().forEach(track => track.stop());
+          // Start the actual speech recognizer
+          startRecognition();
+        })
+        .catch((err) => {
+          console.error("Microphone access permission error:", err);
+          setSpeechError("Mic access denied");
+          setIsListening(false);
+        });
+    } else {
+      // Direct fallback if getUserMedia is unavailable
+      startRecognition();
     }
   };
 

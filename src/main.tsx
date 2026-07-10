@@ -12,7 +12,8 @@ createRoot(document.getElementById('root')!).render(
 // Register service worker for offline support
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
+    const swPath = `${(import.meta as any).env?.BASE_URL || './'}sw.js`;
+    navigator.serviceWorker.register(swPath)
       .then((registration) => {
         console.log('ServiceWorker registration successful with scope: ', registration.scope);
       })

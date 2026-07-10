@@ -1,7 +1,7 @@
 const CACHE_NAME = 'taskflow-app-shell-v1';
 const PRE_CACHE_ASSETS = [
-  '/',
-  '/index.html'
+  './',
+  './index.html'
 ];
 
 self.addEventListener('install', (event) => {
@@ -53,7 +53,7 @@ self.addEventListener('fetch', (event) => {
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request).catch(() => {
-        return caches.match('/') || caches.match('/index.html');
+        return caches.match('./') || caches.match('./index.html') || caches.match('/') || caches.match('/index.html');
       })
     );
     return;

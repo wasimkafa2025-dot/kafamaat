@@ -55,6 +55,18 @@ function generateUUID() {
   return 'tf_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
 }
 
+// Helper to determine greeting and icon based on system hour
+function getTimeOfDayGreeting(): { text: string; icon: string } {
+  const hour = new Date().getHours();
+  if (hour < 12) {
+    return { text: 'Good Morning', icon: 'wb_sunny' };
+  } else if (hour < 17) {
+    return { text: 'Good Afternoon', icon: 'wb_sunny' };
+  } else {
+    return { text: 'Good Evening', icon: 'nights_stay' };
+  }
+}
+
 // Session-level tracking set to prevent double automated Telegram notifications due to React re-renders or concurrent interval ticks
 const inFlightTelegramAlerts = new Set<string>();
 
@@ -1619,7 +1631,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
         </div>
 
         {/* Secure Logout Footer */}
-        <div className="p-4 border-t border-gray-100 dark:border-gold-500/10">
+        <div className="p-4 border-t border-gray-100 dark:border-gold-500/10 space-y-2">
           <button 
             onClick={handleLogout}
             className="w-full flex items-center gap-3 p-3.5 md:p-2.5 rounded-xl text-gray-500 hover:bg-red-500/5 hover:text-red-500 transition-colors cursor-pointer text-xs font-semibold"
@@ -1627,6 +1639,11 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
             <LogOut className="w-4.5 h-4.5 shrink-0" />
             {!sidebarCollapsed && <span>Secure Logout</span>}
           </button>
+          {!sidebarCollapsed && (
+            <div className="text-[10px] text-gray-400 dark:text-gray-500 text-center font-mono select-none">
+              v1.2.5 • Rev 2026-07-10
+            </div>
+          )}
         </div>
       </aside>
 
@@ -1711,7 +1728,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
               {/* Welcome banner */}
               <div className="bg-gradient-to-r from-gold-500 to-amber-500 rounded-3xl p-6 md:p-8 text-slate-900 relative overflow-hidden shadow-lg flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="relative z-10 text-center md:text-left space-y-2">
-                  <h1 className="font-display text-2xl md:text-3xl font-bold">Good Morning, {currentUser}!</h1>
+                  <h1 className="font-display text-2xl md:text-3xl font-bold">{getTimeOfDayGreeting().text}, {currentUser}!</h1>
                   <p className="text-slate-800 text-xs md:text-sm max-w-md leading-relaxed">
                     You have executed <span className="font-bold bg-white px-1.5 py-0.5 rounded-md text-xs font-mono">{stats.efficiencyScore}%</span> of today's workload. Let's finish strong!
                   </p>
@@ -1729,7 +1746,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
                 </div>
 
                 <div className="w-24 h-24 relative select-none">
-                  <span className="material-icons text-white text-7xl animate-spin-slow opacity-60">wb_sunny</span>
+                  <span className="material-icons text-white text-7xl animate-spin-slow opacity-60">{getTimeOfDayGreeting().icon}</span>
                 </div>
               </div>
 
