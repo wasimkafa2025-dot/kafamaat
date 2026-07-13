@@ -132,7 +132,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                 const isComp = t.status === 'Completed';
                 let badgeCol = 'bg-emerald-500 text-white';
                 if (isComp) {
-                  badgeCol = 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 line-through';
+                  badgeCol = 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 line-through underline';
                 } else if (t.priority === 'High') {
                   badgeCol = 'bg-red-500 text-white';
                 } else if (t.priority === 'Medium') {
@@ -204,7 +204,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                     e.stopPropagation();
                     onTaskClick(t.id);
                   }}
-                  className={`p-2 border-l-2 bg-white dark:bg-slate-900 rounded shadow-sm text-[10px] ${pCol} ${isComp ? 'opacity-50 line-through' : ''}`}
+                  className={`p-2 border-l-2 bg-white dark:bg-slate-900 rounded shadow-sm text-[10px] ${pCol} ${isComp ? 'opacity-50 line-through underline' : ''}`}
                 >
                   <p className="font-bold text-gray-700 dark:text-white truncate">{t.task}</p>
                   <p className="text-[8px] font-mono text-gray-400 mt-0.5">{t.time}</p>
@@ -247,7 +247,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               className="p-3 bg-gray-50 dark:bg-slate-900 hover:scale-[1.01] transition-transform rounded-xl border border-gray-200/50 dark:border-slate-800 flex justify-between items-center cursor-pointer"
             >
               <div>
-                <h4 className={`font-bold text-sm text-gray-800 dark:text-white truncate ${isComp ? 'line-through opacity-50' : ''}`}>{t.task}</h4>
+                <h4 className={`font-bold text-sm text-gray-800 dark:text-white truncate ${isComp ? 'line-through underline opacity-50' : ''}`}>{t.task}</h4>
                 <p className="text-xs text-gray-400 font-mono mt-0.5">{t.time} | {t.priority} Priority</p>
               </div>
               <button 

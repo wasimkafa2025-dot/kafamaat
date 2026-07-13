@@ -603,7 +603,7 @@ export default function App() {
       const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
       for (const t of currentTasks) {
-        if (t.status === 'Pending' && t.date === tomorrowStr && !t.telegramNotified) {
+        if ((t.status === 'Pending' || t.status === 'Completed') && t.date === tomorrowStr && !t.telegramNotified) {
           // Check local storage guard to prevent double dispatch in multi-tab setups
           if (localStorage.getItem(`tg_notified_${t.id}`)) {
             continue;
@@ -634,7 +634,7 @@ export default function App() {
               const taskDoc = await transaction.get(taskRef);
               if (taskDoc.exists()) {
                 const data = taskDoc.data();
-                if (data.telegramNotified || data.status !== 'Pending') {
+                if (data.telegramNotified || !(data.status === 'Pending' || data.status === 'Completed')) {
                   throw new Error("Already notified or task status changed");
                 }
               }
@@ -667,24 +667,28 @@ export default function App() {
           // Send Telegram message proxied securely through server
           const isKhmer = /[\u1780-\u17FF]/.test(t.task);
           const priorityEmoji = t.priority === 'High' ? '🔴' : t.priority === 'Medium' ? '🟡' : '🟢';
+          const isCompleted = t.status === 'Completed';
+          const formattedTitle = isCompleted ? `<s><u>${t.task}</u></s>` : `<i>${t.task}</i>`;
           
           let messageText = '';
           if (isKhmer) {
             const priorityKh = t.priority === 'High' ? 'បន្ទាន់' : t.priority === 'Medium' ? 'មធ្យម' : 'មិនសូវបន្ទាន់';
+            const statusText = isCompleted ? '✅ <b>កិច្ចការត្រូវបានបំពេញរួចរាល់!</b>' : `${priorityEmoji} <b>${priorityKh}</b>`;
             messageText = `<b>🔔 សេចក្តីរំលឹកពីការងារដែលត្រូវបំពេញ</b>\n\n` +
                           `សួស្តីលោក កាហ្វា, អ្នកមានកិច្ចការ ឬកិច្ចប្រជុំដែលនឹងត្រូវធ្វើដូចខាងក្រោម៖\n\n` +
-                          `📋 <b>ប្រធានបទ៖</b> <i>${t.task}</i>\n` +
+                          `📋 <b>ប្រធានបទ៖</b> ${formattedTitle}\n` +
                           `📅 <b>ថ្ងៃ ខែ ឆ្នាំ៖</b> <code>${t.date || '--'}</code>\n` +
                           `🕒 <b>ពេលវេលា៖</b> <code>${t.time || '--:--'}</code>\n` +
-                          `⚡ <b>ស្ថានភាព៖</b> ${priorityEmoji} <b>${priorityKh}</b>\n\n` +
+                          `⚡ <b>ស្ថានភាព/អាទិភាព៖</b> ${statusText}\n\n` +
                           `សូមអរគុណ!`;
           } else {
+            const statusText = isCompleted ? '✅ <b>Task Completed!</b>' : `${priorityEmoji} <b>${t.priority}</b>`;
             messageText = `<b>🔔 TaskFlow Alert</b>\n\n` +
                           `Hello Mr. Kafa, here is your upcoming task:\n\n` +
-                          `📋 <b>Title:</b> <i>${t.task}</i>\n` +
+                          `📋 <b>Title:</b> ${formattedTitle}\n` +
                           `📅 <b>Date:</b> <code>${t.date || '--'}</code>\n` +
                           `🕒 <b>Time:</b> <code>${t.time || '--:--'}</code>\n` +
-                          `⚡ <b>Priority:</b> ${priorityEmoji} <b>${t.priority}</b>\n\n` +
+                          `⚡ <b>Priority/Status:</b> ${statusText}\n\n` +
                           `Thank you!`;
           }
           
@@ -866,6 +870,38 @@ export default function App() {
       const db = getActiveDb();
       await setDoc(doc(db, "tasks", id), updated);
       logActivity(`Toggled completion of task: "${task.task}"`);
+
+      // Send Telegram notification if marked as completed
+      if (updated.status === 'Completed') {
+        const isKhmer = /[\u1780-\u17FF]/.test(task.task);
+        const priorityEmoji = task.priority === 'High' ? '🔴' : task.priority === 'Medium' ? '🟡' : '🟢';
+        
+        let messageText = '';
+        if (isKhmer) {
+          const priorityKh = task.priority === 'High' ? 'បន្ទាន់' : task.priority === 'Medium' ? 'មធ្យម' : 'មិនសូវបន្ទាន់';
+          messageText = `<b>✅ កិច្ចការត្រូវបានបំពេញរួចរាល់!</b>\n\n` +
+                        `សួស្តីលោក កាហ្វា, កិច្ចការខាងក្រោមត្រូវបានបំពេញរួចរាល់៖\n\n` +
+                        `📋 <b>ប្រធានបទ៖</b> <s><u>${task.task}</u></s>\n` +
+                        `📅 <b>ថ្ងៃបញ្ចប់៖</b> <code>${new Date().toLocaleDateString('km-KH')}</code>\n` +
+                        `⚡ <b>អាទិភាព៖</b> ${priorityEmoji} <b>${priorityKh}</b>\n\n` +
+                        `សូមអរគុណ!`;
+        } else {
+          messageText = `<b>✅ Task Completed!</b>\n\n` +
+                        `Hello Mr. Kafa, the following task has been marked completed:\n\n` +
+                        `📋 <b>Title:</b> <s><u>${task.task}</u></s>\n` +
+                        `📅 <b>Completed At:</b> <code>${new Date().toLocaleDateString()}</code>\n` +
+                        `⚡ <b>Priority:</b> ${priorityEmoji} <b>${task.priority}</b>\n\n` +
+                        `Thank you!`;
+        }
+
+        sendTelegramMessage(messageText, `completed_${task.id}`).then((success) => {
+          if (success) {
+            logActivity(`Sent completion Telegram alert for: "${task.task}"`);
+          }
+        }).catch((err) => {
+          console.error("Error sending completion Telegram message:", err);
+        });
+      }
     } catch (e) {
       console.warn("Firestore write failed, using local/offline storage:", e);
     }

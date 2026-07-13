@@ -123,7 +123,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       : 'border-gray-200/80 dark:border-slate-800 bg-white dark:bg-[#112240] hover:shadow-sm';
 
   const textStyle = isCompleted 
-    ? 'text-gray-400 dark:text-gray-500 font-medium line-through decoration-gray-400/50 decoration-2' 
+    ? 'text-gray-400 dark:text-gray-500 font-medium line-through underline decoration-gray-400/50 decoration-2' 
     : 'text-gray-800 dark:text-white';
 
   if (viewContext === 'tracker' || viewContext === 'search' || viewContext === 'daily' || viewContext === 'monthly' || viewContext === 'yearly') {

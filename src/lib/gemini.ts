@@ -46,53 +46,86 @@ export async function callGeminiProxy(prompt: string, options: { systemInstructi
     }
   }
 
-  try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${activeKey}`;
-    
-    const requestBody: any = {
-      contents: [{
-        parts: [{ text: prompt }]
-      }]
-    };
+  const models = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
+  let lastError: any = null;
 
-    if (options.systemInstruction || options.jsonSchema) {
-      requestBody.generationConfig = {};
+  for (const model of models) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${activeKey}`;
       
-      if (options.systemInstruction) {
-        requestBody.systemInstruction = {
-          parts: [{ text: options.systemInstruction }]
-        };
+      const requestBody: any = {
+        contents: [{
+          parts: [{ text: prompt }]
+        }]
+      };
+
+      if (options.systemInstruction || options.jsonSchema) {
+        requestBody.generationConfig = {};
+        
+        if (options.systemInstruction) {
+          requestBody.systemInstruction = {
+            parts: [{ text: options.systemInstruction }]
+          };
+        }
+        
+        if (options.jsonSchema) {
+          requestBody.generationConfig.responseMimeType = "application/json";
+          requestBody.generationConfig.responseSchema = options.jsonSchema;
+        }
+      }
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.warn(`Direct Gemini API request for model ${model} failed:`, errorText);
+        lastError = { status: response.status, text: errorText };
+        continue;
+      }
+
+      const data = await response.json();
+      
+      if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
+        return data.candidates[0].content.parts[0].text || null;
       }
       
-      if (options.jsonSchema) {
-        requestBody.generationConfig.responseMimeType = "application/json";
-        requestBody.generationConfig.responseSchema = options.jsonSchema;
-      }
+      return null;
+    } catch (err: any) {
+      console.warn(`Error during call for model ${model}:`, err);
+      lastError = err;
     }
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(requestBody)
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Direct Gemini API request failed:", errorText);
-      throw new Error(`Google API returned ${response.status}: ${errorText}`);
-    }
-
-    const data = await response.json();
-    
-    if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
-      return data.candidates[0].content.parts[0].text || null;
-    }
-    
-    return null;
-  } catch (directError: any) {
-    console.error("Error during direct client-side Gemini execution:", directError);
-    throw directError;
   }
+
+  // If all models failed
+  if (lastError) {
+    const isQuotaError = lastError.status === 429 || (lastError.text && lastError.text.toLowerCase().includes("quota"));
+    
+    if (isQuotaError) {
+      const changeKey = window.confirm(
+        "⚠️ Gemini API Quota Exceeded (Error 429)\n\n" +
+        "Your Gemini API key has hit Google's rate limits or free-tier quota limits.\n\n" +
+        "Would you like to provide a different/new Gemini API key now to complete this request?"
+      );
+      if (changeKey) {
+        const newKey = window.prompt("🔑 Enter your new Gemini API key:");
+        if (newKey && newKey.trim()) {
+          localStorage.setItem("taskflow_gemini_api_key", newKey.trim());
+          // Retry the function with the new key!
+          return callGeminiProxy(prompt, options);
+        }
+      }
+      throw new Error(
+        "Quota Exceeded (429). Please wait a few minutes before trying again, or click the gear icon (⚙️) on the top right to enter a fresh Gemini API key."
+      );
+    } else {
+      throw new Error(`Gemini AI service error: ${lastError.text || lastError.message || lastError}`);
+    }
+  }
+  return null;
 }
