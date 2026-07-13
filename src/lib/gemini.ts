@@ -30,12 +30,24 @@ export async function callGeminiProxy(prompt: string, options: { systemInstructi
   }
 
   // Client-side fallback: Call Google Gemini API directly from the browser
-  if (!localKey) {
-    throw new Error("Gemini API key is required but not configured. Set it in the AI Settings.");
+  let activeKey = localKey;
+  if (!activeKey) {
+    const userKey = window.prompt(
+      "🔑 Gemini API Key Required\n\n" +
+      "Since this app is hosted on a static environment (like GitHub Pages) or the server proxy is unavailable, a Gemini API key is needed to use the AI features.\n\n" +
+      "Please enter your Gemini API key (usually starts with 'AIzaSy'):"
+    );
+    if (userKey && userKey.trim()) {
+      const trimmedKey = userKey.trim();
+      localStorage.setItem("taskflow_gemini_api_key", trimmedKey);
+      activeKey = trimmedKey;
+    } else {
+      throw new Error("Gemini API key is required but not configured. Click the gear icon on the top right to open settings.");
+    }
   }
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${localKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${activeKey}`;
     
     const requestBody: any = {
       contents: [{

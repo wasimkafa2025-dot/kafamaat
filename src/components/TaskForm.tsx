@@ -239,8 +239,9 @@ Text to parse: "${aiInput}"`;
           if (parsed.time) setTime(parsed.time);
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('AI smart fill failed:', error);
+      alert(`AI Smart Creator failed:\n\n${error?.message || error}`);
     } finally {
       setLoading(false);
     }
@@ -262,8 +263,9 @@ Text to parse: "${aiInput}"`;
       if (response) {
         setDescription(response.trim());
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('AI description generator failed:', error);
+      alert(`AI Description Generation failed:\n\n${error?.message || error}`);
     } finally {
       setAiDescLoading(false);
     }

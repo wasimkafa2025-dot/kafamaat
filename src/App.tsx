@@ -17,12 +17,15 @@ import {
   query, 
   where,
   getDocs,
-  writeBatch
+  writeBatch,
+  runTransaction,
+  updateDoc
 } from "firebase/firestore";
 import { Chart } from 'chart.js/auto';
 import { 
   Hourglass, 
   Sparkles, 
+  Zap,
   User, 
   Lock, 
   Eye, 
@@ -133,9 +136,9 @@ export default function App() {
   const [yearlyStatusFilter, setYearlyStatusFilter] = useState<'all' | 'Pending' | 'Completed'>('all');
 
   // Sorting preferences inside Daily/Monthly/Yearly lists
-  const [dailySortBy, setDailySortBy] = useState<'date' | 'priority' | 'status' | 'smart'>('date');
-  const [monthlySortBy, setMonthlySortBy] = useState<'date' | 'priority' | 'status' | 'smart'>('date');
-  const [yearlySortBy, setYearlySortBy] = useState<'date' | 'priority' | 'status' | 'smart'>('date');
+  const [dailySortBy, setDailySortBy] = useState<'date' | 'priority' | 'status' | 'smart' | 'quick'>('date');
+  const [monthlySortBy, setMonthlySortBy] = useState<'date' | 'priority' | 'status' | 'smart' | 'quick'>('date');
+  const [yearlySortBy, setYearlySortBy] = useState<'date' | 'priority' | 'status' | 'smart' | 'quick'>('date');
 
   // AI Productivity Summary
   const [aiSummaryRange, setAiSummaryRange] = useState<'today' | 'week'>('today');
@@ -558,15 +561,24 @@ export default function App() {
     return () => unsubscribe();
   }, [currentUser, dbMode]);
 
+  // Keep tasks reference fresh for the interval loop without triggering effect re-execution
+  const latestTasksRef = useRef<Task[]>([]);
+  useEffect(() => {
+    latestTasksRef.current = tasks;
+  }, [tasks]);
+
   // --- REAL-TIME DUE ALARMS & AUTOMATIC TELEGRAM ALERTS ---
   useEffect(() => {
-    if (!currentUser || tasks.length === 0) return;
+    if (!currentUser) return;
 
     const checkInterval = setInterval(async () => {
+      const currentTasks = latestTasksRef.current;
+      if (currentTasks.length === 0) return;
+
       const now = new Date();
       
       // 1. Task Alarm due trigger
-      tasks.forEach((t) => {
+      currentTasks.forEach((t) => {
         if (t.status === 'Pending' && t.date && t.time) {
           const [h, m] = t.time.split(':');
           const taskTime = new Date(t.date);
@@ -578,9 +590,9 @@ export default function App() {
             playAlertChime();
             
             // Mark as alerted
-            const updated = { ...t, dueAlerted: true };
             const db = getActiveDb();
-            setDoc(doc(db, "tasks", t.id), updated).catch(() => {});
+            const taskRef = doc(db, "tasks", t.id);
+            updateDoc(taskRef, { dueAlerted: true }).catch(() => {});
           }
         }
       });
@@ -590,13 +602,67 @@ export default function App() {
       tomorrow.setDate(tomorrow.getDate() + 1);
       const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
-      for (const t of tasks) {
+      for (const t of currentTasks) {
         if (t.status === 'Pending' && t.date === tomorrowStr && !t.telegramNotified) {
+          // Check local storage guard to prevent double dispatch in multi-tab setups
+          if (localStorage.getItem(`tg_notified_${t.id}`)) {
+            continue;
+          }
+
           // Guard against in-flight duplicate dispatching
           if (inFlightTelegramAlerts.has(t.id)) {
             continue;
           }
           inFlightTelegramAlerts.add(t.id);
+          localStorage.setItem(`tg_notified_${t.id}`, 'true');
+
+          const db = getActiveDb();
+          const taskRef = doc(db, "tasks", t.id);
+          const alertKey = `${t.id}_${t.date}`;
+          const alertLockRef = doc(db, "telegram_sent_alerts", alertKey);
+
+          try {
+            let txSuccess = false;
+            await runTransaction(db, async (transaction) => {
+              // 1. Check the centralized alert lock collection first to prevent double-sends across domains/devices
+              const lockDoc = await transaction.get(alertLockRef);
+              if (lockDoc.exists()) {
+                throw new Error("Alert already sent according to lock collection");
+              }
+
+              // 2. Double-check the task document itself
+              const taskDoc = await transaction.get(taskRef);
+              if (taskDoc.exists()) {
+                const data = taskDoc.data();
+                if (data.telegramNotified || data.status !== 'Pending') {
+                  throw new Error("Already notified or task status changed");
+                }
+              }
+
+              // 3. Atomically create the lock document
+              transaction.set(alertLockRef, {
+                sent: true,
+                sentAt: new Date().toISOString(),
+                taskId: t.id,
+                taskTitle: t.task,
+                userId: currentUser
+              });
+
+              // 4. Update the task state in Firestore
+              transaction.update(taskRef, { telegramNotified: true });
+              txSuccess = true;
+            });
+
+            if (!txSuccess) {
+              continue;
+            }
+          } catch (txError: any) {
+            console.log(`[Alert Shield] Blocked concurrent/duplicate alert trigger:`, txError.message);
+            // Mark locally so we don't try again in this session/loop run
+            inFlightTelegramAlerts.add(t.id);
+            localStorage.setItem(`tg_notified_${t.id}`, 'true');
+            continue;
+          }
 
           // Send Telegram message proxied securely through server
           const isKhmer = /[\u1780-\u17FF]/.test(t.task);
@@ -623,26 +689,29 @@ export default function App() {
           }
           
           try {
-            const success = await sendTelegramMessage(messageText);
+            const success = await sendTelegramMessage(messageText, t.id);
             if (success) {
-              const updated = { ...t, telegramNotified: true };
-              const db = getActiveDb();
-              await setDoc(doc(db, "tasks", t.id), updated).catch(() => {});
               logActivity(`Sent automated Telegram alert 1 day before for: "${t.task}"`);
             } else {
-              // Failed to send, remove from in-flight tracker to allow future retry
+              // Failed to send, revert the database notification status and lock so it can retry
+              await deleteDoc(alertLockRef).catch(() => {});
+              await updateDoc(taskRef, { telegramNotified: false }).catch(() => {});
               inFlightTelegramAlerts.delete(t.id);
+              localStorage.removeItem(`tg_notified_${t.id}`);
             }
           } catch (err) {
             console.error("Failed sending Telegram message in interval loop:", err);
+            await deleteDoc(alertLockRef).catch(() => {});
+            await updateDoc(taskRef, { telegramNotified: false }).catch(() => {});
             inFlightTelegramAlerts.delete(t.id);
+            localStorage.removeItem(`tg_notified_${t.id}`);
           }
         }
       }
     }, 10000); // Check every 10 seconds for real-time accuracy
 
     return () => clearInterval(checkInterval);
-  }, [currentUser, tasks]);
+  }, [currentUser]);
 
   // --- CHART RENDERING ENGINE (CHART.JS) ---
   useEffect(() => {
@@ -1115,8 +1184,78 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
   };
 
   // --- FILTERED ARRAYS ---
-  const sortTasks = (list: Task[], sortBy: 'date' | 'priority' | 'status' | 'smart') => {
+  const sortTasks = (list: Task[], sortBy: 'date' | 'priority' | 'status' | 'smart' | 'quick') => {
+    // Helper to calculate estimated duration / effort for "Quick Sort"
+    const getTaskEffortAndDuration = (t: Task) => {
+      const textToSearch = `${t.task} ${t.description} ${t.tags}`.toLowerCase();
+      
+      // Look for explicit minute pattern: e.g., 15m, 15 min, 15 minutes, 30 mins
+      const minMatch = textToSearch.match(/(\d+(?:\.\d+)?)\s*(?:min|mins|minute|minutes|m\b)/);
+      if (minMatch) {
+        const mins = parseFloat(minMatch[1]);
+        if (!isNaN(mins)) return { duration: mins, source: 'parsed-min' };
+      }
+
+      // Look for explicit hour pattern: e.g., 1h, 2 hrs, 1.5 hours
+      const hrMatch = textToSearch.match(/(\d+(?:\.\d+)?)\s*(?:hr|hrs|hour|hours|h\b)/);
+      if (hrMatch) {
+        const hrs = parseFloat(hrMatch[1]);
+        if (!isNaN(hrs)) return { duration: hrs * 60, source: 'parsed-hr' };
+      }
+
+      // Look for effort-related keywords
+      if (
+        textToSearch.includes('low effort') || 
+        textToSearch.includes('quick win') || 
+        textToSearch.includes('easy') || 
+        textToSearch.includes('simple') || 
+        textToSearch.includes('quick') || 
+        textToSearch.includes('fast')
+      ) {
+        return { duration: 10, source: 'low-effort' };
+      }
+      if (textToSearch.includes('medium effort') || textToSearch.includes('moderate')) {
+        return { duration: 35, source: 'medium-effort' };
+      }
+      if (
+        textToSearch.includes('high effort') || 
+        textToSearch.includes('hard') || 
+        textToSearch.includes('difficult') || 
+        textToSearch.includes('complex')
+      ) {
+        return { duration: 120, source: 'high-effort' };
+      }
+
+      // Heuristic fallback based on task priority (low priority defaults to easier/quicker)
+      if (t.priority === 'Low') {
+        return { duration: 15, source: 'priority-low' };
+      } else if (t.priority === 'Medium') {
+        return { duration: 45, source: 'priority-medium' };
+      } else {
+        return { duration: 90, source: 'priority-high' };
+      }
+    };
+
     return [...list].sort((a, b) => {
+      if (sortBy === 'quick') {
+        const estA = getTaskEffortAndDuration(a).duration;
+        const estB = getTaskEffortAndDuration(b).duration;
+        if (estA !== estB) {
+          return estA - estB; // Shortest duration first (quick win!)
+        }
+        // If equal, sort pending tasks first
+        if (a.status !== b.status) {
+          return a.status === 'Pending' ? -1 : 1;
+        }
+        // Fallback to priority (Low priority first)
+        const priorityWeight = { 'Low': 1, 'Medium': 2, 'High': 3 };
+        const weightA = priorityWeight[a.priority] || 2;
+        const weightB = priorityWeight[b.priority] || 2;
+        if (weightA !== weightB) {
+          return weightA - weightB;
+        }
+        return (a.date || '').localeCompare(b.date || '');
+      }
       if (sortBy === 'date') {
         const dateA = a.date || '';
         const dateB = b.date || '';
@@ -1641,45 +1780,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
               {!sidebarCollapsed && <span>Cloud Sync / AI</span>}
             </button>
             
-            {/* Keyboard Shortcuts Info Section */}
-            <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gold-500/10">
-              {sidebarCollapsed ? (
-                <div className="group relative flex justify-center py-2 text-gray-400 dark:text-gray-500 hover:text-[#C59B27] cursor-help">
-                  <Keyboard className="w-4.5 h-4.5 shrink-0" />
-                  
-                  {/* Tooltip on Hover */}
-                  <div className="absolute left-16 bottom-0 w-48 bg-white dark:bg-[#112240] border border-gray-200 dark:border-gold-500/15 rounded-xl p-3 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 text-[10px] font-sans text-gray-600 dark:text-gray-300 pointer-events-none">
-                    <p className="font-bold text-gray-800 dark:text-gold-500 mb-2 font-serif tracking-wide text-xs">SHORTCUTS</p>
-                    <div className="space-y-1.5 font-mono">
-                      <div className="flex justify-between items-center"><span className="bg-gray-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-gray-200/50 dark:border-slate-700">N</span> <span>New Task</span></div>
-                      <div className="flex justify-between items-center"><span className="bg-gray-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-gray-200/50 dark:border-slate-700">/</span> <span>Search</span></div>
-                      <div className="flex justify-between items-center"><span className="bg-gray-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-gray-200/50 dark:border-slate-700">ESC</span> <span>Close</span></div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-3 bg-gray-50/50 dark:bg-slate-900/30 border border-gray-150/50 dark:border-gold-500/5 rounded-2xl">
-                  <h5 className="text-[10px] font-serif font-bold tracking-widest text-gold-700 dark:text-gold-500 uppercase mb-2 flex items-center gap-1.5 select-none">
-                    <Keyboard className="w-3.5 h-3.5" />
-                    <span>Keyboard Shortcuts</span>
-                  </h5>
-                  <div className="space-y-1.5 text-[10px] font-mono text-gray-500 dark:text-gray-400">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-400 dark:text-gray-500">Create Task</span>
-                      <kbd className="bg-white dark:bg-[#112240] px-1.5 py-0.5 rounded border border-gray-250 dark:border-slate-800 font-bold text-gray-700 dark:text-gold-500 shadow-sm text-[9px]">N</kbd>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-400 dark:text-gray-500">Focus Search</span>
-                      <kbd className="bg-white dark:bg-[#112240] px-1.5 py-0.5 rounded border border-gray-250 dark:border-slate-800 font-bold text-gray-700 dark:text-gold-500 shadow-sm text-[9px]">/</kbd>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-400 dark:text-gray-500">Close Modals</span>
-                      <kbd className="bg-white dark:bg-[#112240] px-1.5 py-0.5 rounded border border-gray-250 dark:border-slate-800 font-bold text-gray-700 dark:text-gold-500 shadow-sm text-[9px]">ESC</kbd>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* Keyboard Shortcuts Info Section hidden from UI to declutter, but keyboard shortcuts logic remains active */}
           </div>
         </div>
 
@@ -2017,6 +2118,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
                         <option value="priority">Priority</option>
                         <option value="status">Status</option>
                         <option value="smart">Smart Sort ✨</option>
+                        <option value="quick">Quick Sort ⚡</option>
                       </select>
                       
                       <span className="text-[11px] font-mono text-gray-400 dark:text-gray-300 whitespace-nowrap sm:ml-2">Status:</span>
@@ -2042,6 +2144,20 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
                       >
                         <Sparkles className="w-3.5 h-3.5 shrink-0" />
                         <span>Smart Sort</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setDailySortBy(dailySortBy === 'quick' ? 'date' : 'quick')}
+                        className={`text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer select-none border whitespace-nowrap ${
+                          dailySortBy === 'quick'
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm hover:bg-emerald-700'
+                            : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/10 dark:hover:bg-emerald-500/10'
+                        }`}
+                        title="Automatically reorders tasks by shortest duration or lowest effort for quick wins!"
+                      >
+                        <Zap className="w-3.5 h-3.5 shrink-0" />
+                        <span>Quick Sort</span>
                       </button>
                     </div>
                     <div className="relative w-full sm:w-64">
@@ -2102,6 +2218,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
                         <option value="priority">Priority</option>
                         <option value="status">Status</option>
                         <option value="smart">Smart Sort ✨</option>
+                        <option value="quick">Quick Sort ⚡</option>
                       </select>
 
                       <span className="text-[11px] font-mono text-gray-400 dark:text-gray-300 whitespace-nowrap sm:ml-2">Status:</span>
@@ -2127,6 +2244,20 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
                       >
                         <Sparkles className="w-3.5 h-3.5 shrink-0" />
                         <span>Smart Sort</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setMonthlySortBy(monthlySortBy === 'quick' ? 'date' : 'quick')}
+                        className={`text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer select-none border whitespace-nowrap ${
+                          monthlySortBy === 'quick'
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm hover:bg-emerald-700'
+                            : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/10 dark:hover:bg-emerald-500/10'
+                        }`}
+                        title="Automatically reorders tasks by shortest duration or lowest effort for quick wins!"
+                      >
+                        <Zap className="w-3.5 h-3.5 shrink-0" />
+                        <span>Quick Sort</span>
                       </button>
                     </div>
                     <div className="relative w-full sm:w-64">
@@ -2182,6 +2313,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
                         <option value="priority">Priority</option>
                         <option value="status">Status</option>
                         <option value="smart">Smart Sort ✨</option>
+                        <option value="quick">Quick Sort ⚡</option>
                       </select>
 
                       <span className="text-[11px] font-mono text-gray-400 dark:text-gray-300 whitespace-nowrap sm:ml-2">Status:</span>
@@ -2207,6 +2339,20 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
                       >
                         <Sparkles className="w-3.5 h-3.5 shrink-0" />
                         <span>Smart Sort</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setYearlySortBy(yearlySortBy === 'quick' ? 'date' : 'quick')}
+                        className={`text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer select-none border whitespace-nowrap ${
+                          yearlySortBy === 'quick'
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm hover:bg-emerald-700'
+                            : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/10 dark:hover:bg-emerald-500/10'
+                        }`}
+                        title="Automatically reorders tasks by shortest duration or lowest effort for quick wins!"
+                      >
+                        <Zap className="w-3.5 h-3.5 shrink-0" />
+                        <span>Quick Sort</span>
                       </button>
                     </div>
                     <div className="relative w-full sm:w-64">
