@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Task } from '../types';
-import { Calendar, ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Check, CheckCheck, CalendarDays, ExternalLink } from 'lucide-react';
 
 interface CalendarViewProps {
   tasks: Task[];
@@ -307,8 +307,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
     if (dayTasks.length === 0) {
       return (
-        <div className="text-center py-16 text-gray-400 font-mono text-xs select-none">
-          <span className="material-icons text-3xl mb-1 text-emerald-500">done_all</span>
+        <div className="text-center py-16 text-gray-400 font-mono text-xs select-none flex flex-col items-center justify-center gap-1.5">
+          <CheckCheck className="w-8 h-8 text-emerald-500 animate-pulse" />
           <p>Your calendar is empty for today!</p>
         </div>
       );
@@ -358,7 +358,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     <div className="bg-white/80 dark:bg-[#112240]/80 border border-gray-200/50 dark:border-gold-500/5 p-6 rounded-2xl shadow-sm space-y-6">
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-gray-100 dark:border-gold-500/5 pb-6 mb-2">
         <div className="flex items-center gap-3">
-          <span className="material-icons text-3xl text-gold-500">calendar_month</span>
+          <CalendarDays className="w-7 h-7 text-[#C59B27] dark:text-gold-500" />
           <div>
             <h3 className="font-display font-bold text-xl text-gray-800 dark:text-gold-500">
               {monthNames[calendarDate.getMonth()]} {calendarDate.getFullYear()}
@@ -373,7 +373,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                 className="text-[#C59B27] hover:text-[#b0871e] hover:underline inline-flex items-center gap-1 font-semibold"
               >
                 Khmer Lunar Calendar
-                <span className="material-icons text-[10px]">open_in_new</span>
+                <ExternalLink className="w-3 h-3 text-[#C59B27]" />
               </a>
             </p>
           </div>

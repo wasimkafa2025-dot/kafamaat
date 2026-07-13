@@ -32,6 +32,7 @@ import {
   EyeOff, 
   CheckCircle, 
   LayoutDashboard, 
+  Calendar,
   Calendar as CalendarIcon, 
   FileUp, 
   FileDown, 
@@ -51,7 +52,23 @@ import {
   X,
   Wifi,
   WifiOff,
-  Keyboard
+  Keyboard,
+  ChevronRight,
+  ChevronLeft,
+  Camera,
+  CalendarDays,
+  CalendarRange,
+  Menu,
+  Star,
+  BarChart3,
+  PieChart,
+  Lightbulb,
+  Bot,
+  Clock,
+  Flag,
+  Bell,
+  RefreshCw,
+  Send
 } from 'lucide-react';
 
 function generateUUID() {
@@ -59,14 +76,14 @@ function generateUUID() {
 }
 
 // Helper to determine greeting and icon based on system hour
-function getTimeOfDayGreeting(): { text: string; icon: string } {
+function getTimeOfDayGreeting(): { text: string; icon: 'sun' | 'moon' } {
   const hour = new Date().getHours();
   if (hour < 12) {
-    return { text: 'Good Morning', icon: 'wb_sunny' };
+    return { text: 'Good Morning', icon: 'sun' };
   } else if (hour < 17) {
-    return { text: 'Good Afternoon', icon: 'wb_sunny' };
+    return { text: 'Good Afternoon', icon: 'sun' };
   } else {
-    return { text: 'Good Evening', icon: 'nights_stay' };
+    return { text: 'Good Evening', icon: 'moon' };
   }
 }
 
@@ -1664,7 +1681,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-400 hover:text-gray-600 cursor-pointer hidden md:block"
           >
-            <span className="material-icons text-sm">{sidebarCollapsed ? 'chevron_right' : 'chevron_left'}</span>
+            {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
         </div>
 
@@ -1688,7 +1705,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
                 htmlFor="profile-pic-uploader"
                 className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white animate-fade-in"
               >
-                <span className="material-icons text-lg">photo_camera</span>
+                <Camera className="w-5 h-5 text-white" />
                 <input 
                   type="file" 
                   id="profile-pic-uploader" 
@@ -1733,7 +1750,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
                 ${activeView === 'daily-tasks' ? 'active text-[#C59B27]' : 'text-gray-600 dark:text-gray-300'}`}
             >
               <div className="flex items-center gap-3">
-                <span className="material-icons text-[#C59B27] text-lg select-none">today</span>
+                <Calendar className="w-4.5 h-4.5 shrink-0 text-[#C59B27]" />
                 {!sidebarCollapsed && <span>Daily Tasks</span>}
               </div>
               {!sidebarCollapsed && (
@@ -1749,7 +1766,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
                 ${activeView === 'monthly-tasks' ? 'active text-[#C59B27]' : 'text-gray-600 dark:text-gray-300'}`}
             >
               <div className="flex items-center gap-3">
-                <span className="material-icons text-[#C59B27] text-lg select-none">date_range</span>
+                <CalendarDays className="w-4.5 h-4.5 shrink-0 text-[#C59B27]" />
                 {!sidebarCollapsed && <span>Monthly Tasks</span>}
               </div>
               {!sidebarCollapsed && (
@@ -1765,7 +1782,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
                 ${activeView === 'yearly-tasks' ? 'active text-[#C59B27]' : 'text-gray-600 dark:text-gray-300'}`}
             >
               <div className="flex items-center gap-3">
-                <span className="material-icons text-[#C59B27] text-lg select-none">calendar_today</span>
+                <CalendarRange className="w-4.5 h-4.5 shrink-0 text-[#C59B27]" />
                 {!sidebarCollapsed && <span>Yearly Tasks</span>}
               </div>
               {!sidebarCollapsed && (
@@ -1878,7 +1895,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
               onClick={() => setMobileSidebarOpen(true)}
               className="p-1.5 -ml-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-600 dark:text-gold-500 md:hidden cursor-pointer"
             >
-              <span className="material-icons">menu</span>
+              <Menu className="w-5 h-5" />
             </button>
             
             <div>
@@ -1963,8 +1980,12 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
                   </div>
                 </div>
 
-                <div className="w-24 h-24 relative select-none">
-                  <span className="material-icons text-white text-7xl animate-spin-slow opacity-60">{getTimeOfDayGreeting().icon}</span>
+                <div className="w-24 h-24 flex items-center justify-center select-none">
+                  {getTimeOfDayGreeting().icon === 'sun' ? (
+                    <Sun className="w-16 h-16 text-white animate-spin-slow opacity-60" />
+                  ) : (
+                    <Moon className="w-16 h-16 text-white animate-pulse opacity-60" />
+                  )}
                 </div>
               </div>
 
@@ -1976,7 +1997,9 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
                     <div className="font-display font-bold text-2xl text-gray-800 dark:text-white mt-1">{stats.todayCount}</div>
                     <p className="text-[9px] text-gray-400 font-mono mt-1">✓ {stats.todayCompleted} / ⌛ {stats.todayPending}</p>
                   </div>
-                  <span className="material-icons text-xl text-[#C59B27] p-3 bg-amber-500/10 rounded-full select-none">today</span>
+                  <div className="p-3 bg-amber-500/10 rounded-full text-[#C59B27] shrink-0">
+                    <Calendar className="w-5 h-5" />
+                  </div>
                 </div>
 
                 <div className="bg-white/80 border border-gray-100 rounded-2xl p-4 shadow-sm flex items-center justify-between dark:bg-[#112240] dark:border-gold-500/5 group hover:-translate-y-0.5 transition-transform">
@@ -1985,7 +2008,9 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
                     <div className="font-display font-bold text-2xl text-gray-800 dark:text-white mt-1">{stats.monthlyCount}</div>
                     <p className="text-[9px] text-gray-400 font-mono mt-1">✓ {stats.monthlyCompleted} / ⌛ {stats.monthlyPending}</p>
                   </div>
-                  <span className="material-icons text-xl text-[#C59B27] p-3 bg-amber-500/10 rounded-full select-none">date_range</span>
+                  <div className="p-3 bg-amber-500/10 rounded-full text-[#C59B27] shrink-0">
+                    <CalendarDays className="w-5 h-5" />
+                  </div>
                 </div>
 
                 <div className="bg-white/80 border border-gray-100 rounded-2xl p-4 shadow-sm flex items-center justify-between dark:bg-[#112240] dark:border-gold-500/5 group hover:-translate-y-0.5 transition-transform">
@@ -1994,7 +2019,9 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
                     <div className="font-display font-bold text-2xl text-gray-800 dark:text-white mt-1">{stats.yearlyCount}</div>
                     <p className="text-[9px] text-gray-400 font-mono mt-1">✓ {stats.yearlyCompleted} / ⌛ {stats.yearlyPending}</p>
                   </div>
-                  <span className="material-icons text-xl text-[#C59B27] p-3 bg-amber-500/10 rounded-full select-none">calendar_today</span>
+                  <div className="p-3 bg-amber-500/10 rounded-full text-[#C59B27] shrink-0">
+                    <CalendarRange className="w-5 h-5" />
+                  </div>
                 </div>
 
                 <div className="bg-white/80 border border-gray-100 rounded-2xl p-4 shadow-sm flex items-center justify-between dark:bg-[#112240] dark:border-gold-500/5 group hover:-translate-y-0.5 transition-transform">
@@ -2003,7 +2030,9 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
                     <div className="font-display font-bold text-2xl text-gray-800 dark:text-white mt-1">{stats.efficiencyScore}%</div>
                     <p className="text-[9px] text-gray-400 font-mono mt-1">{stats.efficiencyScore > 80 ? 'Elite Performance' : 'Standard Focused'}</p>
                   </div>
-                  <span className="material-icons text-xl text-[#C59B27] p-3 bg-amber-500/10 rounded-full select-none">stars</span>
+                  <div className="p-3 bg-amber-500/10 rounded-full text-[#C59B27] shrink-0">
+                    <Star className="w-5 h-5" />
+                  </div>
                 </div>
               </div>
 
@@ -2013,7 +2042,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
                 {/* Completion Charts */}
                 <div className="xl:col-span-2 bg-white/80 dark:bg-[#112240]/80 border border-gray-200/50 dark:border-gold-500/5 p-6 rounded-2xl shadow-sm space-y-4">
                   <h3 className="font-display font-bold text-lg text-gray-800 dark:text-gold-500 flex items-center gap-2 border-b border-gray-100 dark:border-slate-800 pb-3">
-                    <span className="material-icons text-gold-500 text-lg">analytics</span> Completed vs Pending Ratio
+                    <BarChart3 className="w-5 h-5 text-gold-500" /> Completed vs Pending Ratio
                   </h3>
                   <div className="h-64 relative">
                     <canvas ref={chartCanvasRef}></canvas>
@@ -2023,7 +2052,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
                 {/* Priority distribution */}
                 <div className="bg-white/80 dark:bg-[#112240]/80 border border-gray-200/50 dark:border-gold-500/5 p-6 rounded-2xl shadow-sm space-y-5">
                   <h3 className="font-display font-bold text-lg text-gray-800 dark:text-gold-500 flex items-center gap-2 border-b border-gray-100 dark:border-slate-800 pb-3">
-                    <span className="material-icons text-gold-500 text-lg">pie_chart</span> Urgency Breakdowns
+                    <PieChart className="w-5 h-5 text-gold-500" /> Urgency Breakdowns
                   </h3>
 
                   <div className="space-y-4 font-mono text-xs">
@@ -2059,7 +2088,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
                   </div>
 
                   <div className="p-4 bg-amber-500/5 border border-amber-500/10 rounded-xl space-y-2 text-xs">
-                    <span className="font-bold text-amber-600 dark:text-gold-500 flex items-center gap-1"><span className="material-icons text-sm">tips_and_updates</span> TaskFlow Coach</span>
+                    <span className="font-bold text-amber-600 dark:text-gold-500 flex items-center gap-1.5"><Lightbulb className="w-4 h-4 text-amber-500 animate-pulse" /> TaskFlow Coach</span>
                     <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-relaxed">
                       Always prioritize <b>High Priority</b> elements. Automatic 1-day Telegram notifications are actively polling due schedules.
                     </p>
@@ -2072,7 +2101,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
               <div className="bg-white/80 dark:bg-[#112240]/80 border border-gray-200/50 dark:border-gold-500/5 p-6 rounded-2xl shadow-sm">
                 <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-3 flex-wrap gap-3">
                   <h3 className="font-display font-bold text-lg text-gray-800 dark:text-gold-500 flex items-center gap-2">
-                    <span className="material-icons text-gold-500">auto_awesome</span> AI Executive Productivity report
+                    <Bot className="w-5 h-5 text-gold-500" /> AI Executive Productivity report
                   </h3>
                   
                   <div className="flex items-center gap-3">
@@ -2137,7 +2166,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
               {/* Upcoming schedule grid list */}
               <div className="bg-white/80 dark:bg-[#112240]/80 border border-gray-200/50 dark:border-gold-500/5 p-6 rounded-2xl shadow-sm space-y-4">
                 <h3 className="font-display font-bold text-lg text-gray-800 dark:text-gold-500 flex items-center gap-2 border-b border-gray-100 dark:border-slate-800 pb-3">
-                  <span className="material-icons text-gold-500">schedule</span> Upcoming Schedules (Next 5 Tasks)
+                  <Clock className="w-5 h-5 text-gold-500" /> Upcoming Schedules (Next 5 Tasks)
                 </h3>
                 
                 <div className="space-y-3">
@@ -2489,7 +2518,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
             <TaskForm 
               type={quickAddModal.type}
               editTask={editTask}
-              onSubmit={editTask ? handleUpdateTask : (data) => handleAddTask(data, quickAddModal.type)}
+              onSubmit={editTask ? handleUpdateTask : (data, actualType) => handleAddTask(data, actualType || quickAddModal.type)}
               onCancel={() => { setQuickAddModal({ open: false, type: 'daily' }); setEditTask(null); }}
               showDelete={!!editTask}
               onDelete={() => { if (editTask) { handleDeleteTask(editTask.id); setEditTask(null); setQuickAddModal({ open: false, type: 'daily' }); } }}
@@ -2526,15 +2555,15 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
 
             <div className="flex flex-wrap items-center gap-4 text-xs font-mono text-gray-500 dark:text-gray-400 border-y border-gray-100 dark:border-slate-800 py-3 mb-4 select-none">
               <div className="flex items-center gap-1">
-                <span className="material-icons text-sm text-gray-400 dark:text-gold-500">calendar_today</span>
+                <Calendar className="w-3.5 h-3.5 text-gray-400 dark:text-gold-500" />
                 <span>{detailModalTask.type === 'yearly' ? `Month: ${detailModalTask.month}` : detailModalTask.date}</span>
               </div>
               <div className="flex items-center gap-1">
-                <span className="material-icons text-xs text-gold-500">schedule</span>
+                <Clock className="w-3.5 h-3.5 text-gold-500" />
                 <span>{detailModalTask.time || '--:--'}</span>
               </div>
               <div className="flex items-center gap-1">
-                <span className="material-icons text-sm text-red-500">flag</span>
+                <Flag className="w-3.5 h-3.5 text-red-500" />
                 <span>{detailModalTask.priority} Priority</span>
               </div>
             </div>
@@ -2589,7 +2618,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
             </button>
 
             <h3 className="font-display font-bold text-lg text-gray-800 dark:text-gold-500 mb-1 flex items-center gap-1.5 select-none">
-              <span className="material-icons text-lg">history_toggle_off</span> Restore Snapshots Timeline
+              <History className="w-5 h-5 text-gold-500" /> Restore Snapshots Timeline
             </h3>
             <p className="text-xs text-gray-400 font-mono mb-4">TaskFlow Pro auto-saves key snapshots. Select any point below to restore:</p>
 
@@ -2632,7 +2661,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
             <div className="relative w-16 h-16 mx-auto mb-4 flex items-center justify-center select-none">
               <span className="absolute inset-0 rounded-full bg-amber-500/25 animate-ping"></span>
               <div className="relative w-12 h-12 bg-amber-500 text-white rounded-full flex items-center justify-center">
-                <span className="material-icons text-2xl animate-bounce">notifications_active</span>
+                <Bell className="w-6 h-6 animate-bounce" />
               </div>
             </div>
 
@@ -2712,7 +2741,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
               <div key={idx} className={`flex gap-2 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 select-none
                   ${m.role === 'user' ? 'bg-gray-200 text-gray-700' : 'bg-gold-500/15 text-gold-600 dark:text-gold-500'}`}>
-                  <span className="material-icons text-[10px]">{m.role === 'user' ? 'person' : 'auto_awesome'}</span>
+                  {m.role === 'user' ? <User className="w-3 h-3" /> : <Bot className="w-3 h-3" />}
                 </div>
                 <div className={`rounded-xl rounded-tl-none px-3 py-2 max-w-[85%]
                   ${m.role === 'user' ? 'bg-gold-500 text-slate-900 font-medium' : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-200'}`}>
@@ -2723,7 +2752,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
             {aiChatLoading && (
               <div className="flex gap-2">
                 <div className="w-6 h-6 rounded-full bg-gold-500/15 text-gold-600 flex items-center justify-center flex-shrink-0">
-                  <span className="material-icons text-xs animate-spin">refresh</span>
+                  <RefreshCw className="w-3 h-3 animate-spin" />
                 </div>
                 <div className="bg-gray-100 dark:bg-slate-800 text-gray-400 rounded-xl px-3 py-2 font-mono text-[10px]">
                   Thinking...
@@ -2748,7 +2777,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
               disabled={aiChatLoading}
               className="w-9 h-9 shrink-0 bg-gold-500 hover:bg-gold-600 text-white rounded-lg flex items-center justify-center cursor-pointer transition-colors"
             >
-              <span className="material-icons text-sm select-none">send</span>
+              <Send className="w-4 h-4" />
             </button>
           </form>
         </div>

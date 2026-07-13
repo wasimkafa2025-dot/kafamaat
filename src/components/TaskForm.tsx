@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Task } from '../types';
 import { callGeminiProxy } from '../lib/gemini';
-import { Sparkles, Calendar, Clock, Tag, ArrowRight, Save, RotateCcw, Mic, MicOff } from 'lucide-react';
+import { Sparkles, Calendar, Clock, Tag, ArrowRight, Save, RotateCcw, Mic, MicOff, CalendarDays, CalendarRange, RefreshCw } from 'lucide-react';
 
 interface TaskFormProps {
   type: 'daily' | 'monthly' | 'yearly';
   editTask?: Task | null;
-  onSubmit: (taskData: Partial<Task>) => void;
+  onSubmit: (taskData: Partial<Task>, actualType: 'daily' | 'monthly' | 'yearly') => void;
   onCancel?: () => void;
   onDelete?: () => void;
   showDelete?: boolean;
@@ -20,6 +20,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
   onDelete,
   showDelete = false
 }) => {
+  const [selectedType, setSelectedType] = useState<'daily' | 'monthly' | 'yearly'>(type);
   const [taskName, setTaskName] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState('');
@@ -155,6 +156,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
       setPriority(editTask.priority);
       setStatus(editTask.status);
       setTags(editTask.tags || '');
+      setSelectedType(editTask.type);
       if (editTask.type === 'yearly') {
         setMonth(editTask.month || 'October');
       } else {
@@ -171,6 +173,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
       const todayStr = new Date().toISOString().split('T')[0];
       setDate(todayStr);
       setTime('12:00');
+      setSelectedType(type);
     }
   }, [editTask, type]);
 
@@ -186,7 +189,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
       tags: tags.trim(),
     };
 
-    if (type === 'yearly') {
+    if (selectedType === 'yearly') {
       data.month = month;
     } else {
       data.date = date;
@@ -194,7 +197,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
       data.month = new Date(date).toLocaleString('default', { month: 'long' });
     }
 
-    onSubmit(data);
+    onSubmit(data, selectedType);
   };
 
   const handleAiSmartFill = async () => {
@@ -232,7 +235,7 @@ Text to parse: "${aiInput}"`;
         if (parsed.description) setDescription(parsed.description);
         if (parsed.priority) setPriority(parsed.priority);
         if (parsed.tags) setTags(parsed.tags);
-        if (type === 'yearly' && parsed.month) {
+        if (selectedType === 'yearly' && parsed.month) {
           setMonth(parsed.month);
         } else {
           if (parsed.date) setDate(parsed.date);
@@ -254,10 +257,10 @@ Text to parse: "${aiInput}"`;
       let prompt = '';
       if (speechLang === 'km-KH') {
         const priorityKh = priority === 'High' ? 'ខ្ពស់' : priority === 'Medium' ? 'មធ្យម' : 'ទាប';
-        const typeKh = type === 'daily' ? 'ប្រចាំថ្ងៃ' : type === 'monthly' ? 'ប្រចាំខែ' : 'ប្រចាំឆ្នាំ';
+        const typeKh = selectedType === 'daily' ? 'ប្រចាំថ្ងៃ' : selectedType === 'monthly' ? 'ប្រចាំខែ' : 'ប្រចាំឆ្នាំ';
         prompt = `សូមសរសេរការពិពណ៌នាភារកិច្ចឱ្យបានសង្ខេប និងមានលក្ខណៈវិជ្ជាជីវៈ (១ ទៅ ២ ប្រយោគ) សម្រាប់ភារកិច្ចកម្រិតអាទិភាព ${priorityKh} ប្រភេទ ${typeKh} ដែលមានចំណងជើងថា "${taskName}"។ កុំចម្លងចំណងជើងឡើងវិញ។ ចម្លើយទាំងមូលត្រូវតែសរសេរជាភាសាខ្មែរ (Khmer language) ដ៏ត្រឹមត្រូវ និងទាក់ទាញ។ ហាមដាច់ខាតមិនត្រូវបញ្ចូលភាសាអង់គ្លេសឡើយ។ ផ្តល់តែអត្ថបទពិពណ៌នាសុទ្ធសាធ (plain text) គ្មានសញ្ញាសម្រង់ ឬពាក្យផ្តើមឡើយ។`;
       } else {
-        prompt = `Write a concise, professional task description (1-2 sentences) for a ${priority} priority ${type} task titled "${taskName}". Do not copy the title. Plain text output only, no quotes, no conversational filler.`;
+        prompt = `Write a concise, professional task description (1-2 sentences) for a ${priority} priority ${selectedType} task titled "${taskName}". Do not copy the title. Plain text output only, no quotes, no conversational filler.`;
       }
       const response = await callGeminiProxy(prompt);
       if (response) {
@@ -272,11 +275,56 @@ Text to parse: "${aiInput}"`;
   };
 
   const formTitleText = editTask 
-    ? `Edit ${type.charAt(0).toUpperCase() + type.slice(1)} Task` 
-    : `Add ${type.charAt(0).toUpperCase() + type.slice(1)} Task`;
+    ? `Edit ${selectedType.charAt(0).toUpperCase() + selectedType.slice(1)} Task` 
+    : `Add ${selectedType.charAt(0).toUpperCase() + selectedType.slice(1)} Task`;
 
   return (
     <div className="space-y-5">
+      {/* Task Type Segmented Selector */}
+      {!editTask && (
+        <div className="space-y-2">
+          <label className="block text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider select-none">TASK FREQUENCY</label>
+          <div className="grid grid-cols-3 gap-2 p-1 bg-gray-150/40 dark:bg-slate-900/60 border border-gray-250/20 dark:border-gold-500/10 rounded-xl">
+            <button
+              type="button"
+              onClick={() => setSelectedType('daily')}
+              className={`py-2 px-3 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer select-none ${
+                selectedType === 'daily'
+                  ? 'bg-[#C59B27] text-white shadow-sm font-bold'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-250/20 dark:hover:bg-slate-800/30'
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Daily</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedType('monthly')}
+              className={`py-2 px-3 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer select-none ${
+                selectedType === 'monthly'
+                  ? 'bg-[#C59B27] text-white shadow-sm font-bold'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-250/20 dark:hover:bg-slate-800/30'
+              }`}
+            >
+              <CalendarDays className="w-3.5 h-3.5" />
+              <span>Monthly</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedType('yearly')}
+              className={`py-2 px-3 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer select-none ${
+                selectedType === 'yearly'
+                  ? 'bg-[#C59B27] text-white shadow-sm font-bold'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-250/20 dark:hover:bg-slate-800/30'
+              }`}
+            >
+              <CalendarRange className="w-3.5 h-3.5" />
+              <span>Yearly</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* AI Smart Creator Panel (Only visible on Add Task) */}
       {!editTask && (
         <div className="p-3 bg-gold-500/5 border border-gold-500/20 rounded-xl space-y-2">
@@ -299,7 +347,7 @@ Text to parse: "${aiInput}"`;
               className="px-3 py-1.5 bg-gold-500 hover:bg-gold-600 text-white rounded-lg flex items-center gap-1 text-xs font-semibold whitespace-nowrap cursor-pointer transition-colors"
             >
               {loading ? (
-                <span className="material-icons text-sm animate-spin">refresh</span>
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
               ) : (
                 <>
                   <Sparkles className="w-3 h-3" />
@@ -402,7 +450,7 @@ Text to parse: "${aiInput}"`;
         </div>
 
         {/* Dynamic Month or Date Fields */}
-        {type === 'yearly' ? (
+        {selectedType === 'yearly' ? (
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-[11px] font-bold text-gray-400 dark:text-gray-500 mb-1 uppercase tracking-wider">TARGET MONTH</label>
@@ -459,7 +507,7 @@ Text to parse: "${aiInput}"`;
           </div>
         )}
 
-        {type !== 'yearly' && (
+        {selectedType !== 'yearly' && (
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-[11px] font-bold text-gray-400 dark:text-gray-500 mb-1 uppercase tracking-wider">SCHEDULED TIME</label>
@@ -484,7 +532,7 @@ Text to parse: "${aiInput}"`;
           </div>
         )}
 
-        {type === 'yearly' && (
+        {selectedType === 'yearly' && (
           <div>
             <label className="block text-[11px] font-bold text-gray-400 dark:text-gray-500 mb-1 uppercase tracking-wider">TAGS (OPTIONAL)</label>
             <input 

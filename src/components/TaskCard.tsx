@@ -1,6 +1,6 @@
 import React from 'react';
 import { Task } from '../types';
-import { Check, Edit, Trash, Copy, Archive, CheckSquare, Square, Eye } from 'lucide-react';
+import { Check, Edit, Trash, Copy, Archive, CheckSquare, Square, Eye, Calendar, Clock } from 'lucide-react';
 
 interface TaskCardProps {
   task: Task;
@@ -172,7 +172,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             </div>
             
             <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500 font-mono mt-1 flex-wrap">
-              <span className="material-icons text-sm text-gray-400 dark:text-gray-500">calendar_today</span>
+              <Calendar className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
               <span>{displayDate}</span>
               <span className="text-amber-500 font-bold">•</span>
               <span className="text-amber-600 dark:text-amber-400 font-medium">{displayTime}</span>
@@ -260,7 +260,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               </button>
             )}
             <button onClick={() => onEdit(t.id, t.type)} className="p-3 md:p-1 hover:bg-gray-100 dark:hover:bg-slate-800 rounded text-gray-400 hover:text-gray-600 cursor-pointer" title="Edit">
-              <span className="material-icons text-base md:text-xs">edit</span>
+              <Edit className="w-4 h-4 md:w-3.5 md:h-3.5" />
             </button>
             {onArchive && (
               <button onClick={() => onArchive(t.id)} className="p-3 md:p-1 hover:bg-gray-100 dark:hover:bg-slate-800 rounded text-gray-400 hover:text-gray-600 cursor-pointer" title="Archive">
@@ -268,7 +268,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               </button>
             )}
             <button onClick={() => onDelete(t.id)} className="p-3 md:p-1 hover:bg-gray-100 dark:hover:bg-slate-800 rounded text-red-400 hover:text-red-600 cursor-pointer" title="Delete">
-              <span className="material-icons text-base md:text-xs">delete</span>
+              <Trash className="w-4 h-4 md:w-3.5 md:h-3.5" />
             </button>
           </div>
         </div>
@@ -289,11 +289,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         <div className="flex justify-between items-center">
           {t.type === 'yearly' ? (
             <div className="flex items-center gap-1 mt-1 text-[10px] font-mono text-gray-400">
-              <span className="material-icons text-xs">calendar_view_year</span> Month: {t.month}
+              <Calendar className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" /> Month: {t.month}
             </div>
           ) : (
             <div className={`flex items-center gap-1 mt-1 text-[10px] font-mono ${isDueNow && !isCompleted ? 'text-amber-500 font-bold animate-pulse' : 'text-gray-400'}`}>
-              <span className="material-icons text-xs">schedule</span> {t.date} at {t.time}
+              <Clock className="w-3.5 h-3.5" /> {t.date} at {t.time}
             </div>
           )}
           

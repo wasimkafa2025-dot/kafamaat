@@ -48,26 +48,30 @@ function setupPersistence(db: Firestore) {
   persistedDbs.add(db);
 
   if (typeof window !== "undefined") {
-    enableMultiTabIndexedDbPersistence(db)
-      .then(() => {
-        console.log("Firestore multi-tab offline persistence enabled successfully.");
-      })
-      .catch((err) => {
-        if (err.code === 'failed-precondition') {
-          // Multiple tabs open, fall back to single tab persistence
-          enableIndexedDbPersistence(db)
-            .then(() => {
-              console.log("Firestore single-tab offline persistence enabled.");
-            })
-            .catch((singleErr) => {
-              console.warn("Firestore single-tab persistence failed: ", singleErr);
-            });
-        } else if (err.code === 'unimplemented') {
-          console.warn("Firestore offline persistence is not supported by this browser.");
-        } else {
-          console.warn("Firestore offline persistence setup error: ", err);
-        }
-      });
+    try {
+      enableMultiTabIndexedDbPersistence(db)
+        .then(() => {
+          console.log("Firestore multi-tab offline persistence enabled successfully.");
+        })
+        .catch((err) => {
+          if (err.code === 'failed-precondition') {
+            // Multiple tabs open, fall back to single tab persistence
+            enableIndexedDbPersistence(db)
+              .then(() => {
+                console.log("Firestore single-tab offline persistence enabled.");
+              })
+              .catch((singleErr) => {
+                console.warn("Firestore single-tab persistence failed: ", singleErr);
+              });
+          } else if (err.code === 'unimplemented') {
+            console.warn("Firestore offline persistence is not supported by this browser.");
+          } else {
+            console.warn("Firestore offline persistence setup error: ", err);
+          }
+        });
+    } catch (e) {
+      console.warn("Exception during Firestore offline persistence initialization: ", e);
+    }
   }
 }
 
