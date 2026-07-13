@@ -127,6 +127,11 @@ export default function App() {
   const [monthlyFilterQuery, setMonthlyFilterQuery] = useState('');
   const [yearlyFilterQuery, setYearlyFilterQuery] = useState('');
 
+  // Specific status filters inside Daily/Monthly/Yearly lists
+  const [dailyStatusFilter, setDailyStatusFilter] = useState<'all' | 'Pending' | 'Completed'>('all');
+  const [monthlyStatusFilter, setMonthlyStatusFilter] = useState<'all' | 'Pending' | 'Completed'>('all');
+  const [yearlyStatusFilter, setYearlyStatusFilter] = useState<'all' | 'Pending' | 'Completed'>('all');
+
   // Sorting preferences inside Daily/Monthly/Yearly lists
   const [dailySortBy, setDailySortBy] = useState<'date' | 'priority' | 'status' | 'smart'>('date');
   const [monthlySortBy, setMonthlySortBy] = useState<'date' | 'priority' | 'status' | 'smart'>('date');
@@ -1159,6 +1164,9 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
 
   const getFilteredDaily = () => {
     let list = tasks.filter(t => t.type === 'daily');
+    if (dailyStatusFilter !== 'all') {
+      list = list.filter(t => t.status === dailyStatusFilter);
+    }
     if (dailyFilterQuery.trim()) {
       const q = dailyFilterQuery.toLowerCase().trim();
       list = list.filter(t => t.task.toLowerCase().includes(q) || t.description.toLowerCase().includes(q));
@@ -1168,6 +1176,9 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
 
   const getFilteredMonthly = () => {
     let list = tasks.filter(t => t.type === 'monthly');
+    if (monthlyStatusFilter !== 'all') {
+      list = list.filter(t => t.status === monthlyStatusFilter);
+    }
     if (monthlyFilterQuery.trim()) {
       const q = monthlyFilterQuery.toLowerCase().trim();
       list = list.filter(t => t.task.toLowerCase().includes(q) || t.description.toLowerCase().includes(q));
@@ -1177,6 +1188,9 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
 
   const getFilteredYearly = () => {
     let list = tasks.filter(t => t.type === 'yearly');
+    if (yearlyStatusFilter !== 'all') {
+      list = list.filter(t => t.status === yearlyStatusFilter);
+    }
     if (yearlyFilterQuery.trim()) {
       const q = yearlyFilterQuery.toLowerCase().trim();
       list = list.filter(t => t.task.toLowerCase().includes(q) || t.description.toLowerCase().includes(q));
@@ -1681,7 +1695,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
               <span id="header-date" className="text-sm font-semibold text-gray-800 dark:text-gold-500">
                 {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
               </span>
-              <span id="header-khmer-date" className="text-[10px] text-[#C59B27] font-medium tracking-wide mt-0.5">
+              <span id="header-khmer-date" className="text-[10px] text-[#C59B27] font-medium tracking-wide mt-0.5 font-khmer">
                 {liveKhmerDate}
               </span>
             </div>
@@ -1710,7 +1724,12 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
             <div className="h-6 w-px bg-gray-100 dark:bg-gold-500/15"></div>
 
             <button 
-              onClick={() => setQuickAddModal({ open: true, type: 'daily' })}
+              onClick={() => {
+                let defaultType: 'daily' | 'monthly' | 'yearly' = 'daily';
+                if (activeView === 'monthly-tasks') defaultType = 'monthly';
+                else if (activeView === 'yearly-tasks') defaultType = 'yearly';
+                setQuickAddModal({ open: true, type: defaultType });
+              }}
               className="bg-[#C59B27] hover:bg-[#A8801B] text-white px-5 py-2.5 rounded-full text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-amber-500/10 active:scale-95 transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4" />
@@ -1904,9 +1923,9 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
 
                 <div className="mt-4 text-xs md:text-sm text-gray-600 dark:text-gray-300 leading-relaxed font-sans">
                   {aiSummaryOutput ? (
-                    <p className={`bg-gold-500/5 border border-gold-500/15 p-4 rounded-xl leading-loose ${reportLang === 'km-KH' ? 'font-sans' : 'font-mono'}`}>{aiSummaryOutput}</p>
+                    <p className={`bg-gold-500/5 border border-gold-500/15 p-4 rounded-xl leading-loose ${reportLang === 'km-KH' ? 'font-khmer' : 'font-mono'}`}>{aiSummaryOutput}</p>
                   ) : (
-                    <p className="text-gray-400 dark:text-gray-500 font-mono text-[11px]">
+                    <p className={`text-gray-400 dark:text-gray-500 text-[11px] ${reportLang === 'km-KH' ? 'font-khmer' : 'font-mono'}`}>
                       {reportLang === 'km-KH' 
                         ? 'សូមចុចលើប៊ូតុង "បង្កើតរបាយការណ៍" ដើម្បីពិនិត្យមើលការវិភាគវឌ្ឍនភាពស្វ័យប្រវត្តដែលសំយោគដោយ Gemini AI។'
                         : 'Click "Generate report" to review automated progress analyses synthesized by Gemini AI.'
@@ -1959,6 +1978,17 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
                         <option value="priority">Priority</option>
                         <option value="status">Status</option>
                         <option value="smart">Smart Sort ✨</option>
+                      </select>
+                      
+                      <span className="text-[11px] font-mono text-gray-400 dark:text-gray-300 whitespace-nowrap sm:ml-2">Status:</span>
+                      <select
+                        value={dailyStatusFilter}
+                        onChange={(e) => setDailyStatusFilter(e.target.value as any)}
+                        className="text-xs bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 dark:text-white rounded-lg px-2.5 py-1.5 focus:outline-none cursor-pointer hover:border-[#C59B27] transition-all"
+                      >
+                        <option value="all">All Tasks</option>
+                        <option value="Pending">Pending ⌛</option>
+                        <option value="Completed">Completed ✓</option>
                       </select>
                       
                       <button
@@ -2034,6 +2064,17 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
                         <option value="status">Status</option>
                         <option value="smart">Smart Sort ✨</option>
                       </select>
+
+                      <span className="text-[11px] font-mono text-gray-400 dark:text-gray-300 whitespace-nowrap sm:ml-2">Status:</span>
+                      <select
+                        value={monthlyStatusFilter}
+                        onChange={(e) => setMonthlyStatusFilter(e.target.value as any)}
+                        className="text-xs bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 dark:text-white rounded-lg px-2.5 py-1.5 focus:outline-none cursor-pointer hover:border-[#C59B27] transition-all"
+                      >
+                        <option value="all">All Tasks</option>
+                        <option value="Pending">Pending ⌛</option>
+                        <option value="Completed">Completed ✓</option>
+                      </select>
                       
                       <button
                         type="button"
@@ -2102,6 +2143,17 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
                         <option value="priority">Priority</option>
                         <option value="status">Status</option>
                         <option value="smart">Smart Sort ✨</option>
+                      </select>
+
+                      <span className="text-[11px] font-mono text-gray-400 dark:text-gray-300 whitespace-nowrap sm:ml-2">Status:</span>
+                      <select
+                        value={yearlyStatusFilter}
+                        onChange={(e) => setYearlyStatusFilter(e.target.value as any)}
+                        className="text-xs bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 dark:text-white rounded-lg px-2.5 py-1.5 focus:outline-none cursor-pointer hover:border-[#C59B27] transition-all"
+                      >
+                        <option value="all">All Tasks</option>
+                        <option value="Pending">Pending ⌛</option>
+                        <option value="Completed">Completed ✓</option>
                       </select>
                       
                       <button

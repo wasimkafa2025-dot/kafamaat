@@ -117,12 +117,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
   // Style overrides for task completeness
   const borderStyle = isCompleted 
-    ? 'border-red-200/60 bg-[#FFD6D6] dark:bg-[#25121b] dark:border-red-950/40 shadow-sm' 
+    ? 'border-emerald-200/50 bg-[#E6F4EA]/40 dark:bg-[#112b1d] dark:border-emerald-950/30 shadow-xs' 
     : isDueNow 
       ? 'border-amber-500 ring-2 ring-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.25)] bg-amber-500/5 dark:bg-amber-500/5' 
       : 'border-gray-200/80 dark:border-slate-800 bg-white dark:bg-[#112240] hover:shadow-sm';
 
-  const textStyle = isCompleted ? 'text-gray-800 dark:text-gray-200 font-medium' : 'text-gray-800 dark:text-white';
+  const textStyle = isCompleted 
+    ? 'text-gray-400 dark:text-gray-500 font-medium line-through decoration-gray-400/50 decoration-2' 
+    : 'text-gray-800 dark:text-white';
 
   if (viewContext === 'tracker' || viewContext === 'search' || viewContext === 'daily' || viewContext === 'monthly' || viewContext === 'yearly') {
     let prioBadge = null;
@@ -143,6 +145,18 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         onDragEnd={handleDragEnd}
       >
         <div className="flex items-center gap-4 min-w-0 flex-1">
+          <button 
+            type="button"
+            onClick={() => onToggleComplete(t.id)}
+            className={`flex items-center justify-center w-6 h-6 rounded-lg transition-all border cursor-pointer shrink-0 ${
+              isCompleted 
+                ? 'bg-emerald-500 border-emerald-500 text-white shadow-xs' 
+                : 'border-gray-300 dark:border-slate-700 hover:border-gold-500 text-transparent hover:bg-gold-500/10'
+            }`}
+            title={isCompleted ? "Mark Pending" : "Mark Completed"}
+          >
+            <Check className="w-3.5 h-3.5 stroke-[3]" />
+          </button>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <h4 className={`font-sans font-bold text-base ${textStyle} truncate`}>
