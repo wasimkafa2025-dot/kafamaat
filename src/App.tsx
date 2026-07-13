@@ -599,14 +599,28 @@ export default function App() {
           inFlightTelegramAlerts.add(t.id);
 
           // Send Telegram message proxied securely through server
+          const isKhmer = /[\u1780-\u17FF]/.test(t.task);
           const priorityEmoji = t.priority === 'High' ? '🔴' : t.priority === 'Medium' ? '🟡' : '🟢';
-          const messageText = `<b>🔔 TaskFlow Alert</b>\n\n` +
-                              `Hello Mr. Kafa, here is your upcoming task:\n\n` +
-                              `📋 <b>Title:</b> <i>${t.task}</i>\n` +
-                              `📅 <b>Date:</b> <code>${t.date || '--'}</code>\n` +
-                              `🕒 <b>Time:</b> <code>${t.time || '--:--'}</code>\n` +
-                              `⚡ <b>Priority:</b> ${priorityEmoji} <b>${t.priority}</b>\n\n` +
-                              `Thank you!`;
+          
+          let messageText = '';
+          if (isKhmer) {
+            const priorityKh = t.priority === 'High' ? 'បន្ទាន់' : t.priority === 'Medium' ? 'មធ្យម' : 'មិនសូវបន្ទាន់';
+            messageText = `<b>🔔 សេចក្តីរំលឹកពីការងារដែលត្រូវបំពេញ</b>\n\n` +
+                          `សួស្តីលោក កាហ្វា, អ្នកមានកិច្ចការ ឬកិច្ចប្រជុំដែលនឹងត្រូវធ្វើដូចខាងក្រោម៖\n\n` +
+                          `📋 <b>ប្រធានបទ៖</b> <i>${t.task}</i>\n` +
+                          `📅 <b>ថ្ងៃ ខែ ឆ្នាំ៖</b> <code>${t.date || '--'}</code>\n` +
+                          `🕒 <b>ពេលវេលា៖</b> <code>${t.time || '--:--'}</code>\n` +
+                          `⚡ <b>ស្ថានភាព៖</b> ${priorityEmoji} <b>${priorityKh}</b>\n\n` +
+                          `សូមអរគុណ!`;
+          } else {
+            messageText = `<b>🔔 TaskFlow Alert</b>\n\n` +
+                          `Hello Mr. Kafa, here is your upcoming task:\n\n` +
+                          `📋 <b>Title:</b> <i>${t.task}</i>\n` +
+                          `📅 <b>Date:</b> <code>${t.date || '--'}</code>\n` +
+                          `🕒 <b>Time:</b> <code>${t.time || '--:--'}</code>\n` +
+                          `⚡ <b>Priority:</b> ${priorityEmoji} <b>${t.priority}</b>\n\n` +
+                          `Thank you!`;
+          }
           
           try {
             const success = await sendTelegramMessage(messageText);
@@ -954,27 +968,52 @@ export default function App() {
   const handleGenerateSummary = async () => {
     setAiSummaryLoading(true);
     try {
-      const pendingText = tasks
-        .filter(t => t.status === 'Pending')
-        .slice(0, 10)
-        .map(t => `- ${t.task} [${t.priority} priority] (due ${t.date || t.month})`)
-        .join('\n');
+      let prompt = '';
+      if (reportLang === 'km-KH') {
+        const pendingText = tasks
+          .filter(t => t.status === 'Pending')
+          .slice(0, 10)
+          .map(t => `- ${t.task} [អាទិភាព៖ ${t.priority === 'High' ? 'ខ្ពស់' : t.priority === 'Medium' ? 'មធ្យម' : 'ទាប'}] (ថ្ងៃកំណត់៖ ${t.date || t.month || 'គ្មានកំណត់'})`)
+          .join('\n');
 
-      const completedText = tasks
-        .filter(t => t.status === 'Completed')
-        .slice(0, 10)
-        .map(t => `- ${t.task}`)
-        .join('\n');
+        const completedText = tasks
+          .filter(t => t.status === 'Completed')
+          .slice(0, 10)
+          .map(t => `- ${t.task}`)
+          .join('\n');
 
-      const prompt = `Review my current productivity status.
+        prompt = `សូមពិនិត្យមើលស្ថានភាពផលិតភាព និងភារកិច្ចបច្ចុប្បន្នរបស់ខ្ញុំ។
+នេះជាភារកិច្ចដែលមិនទាន់បង្ហើយ៖
+${pendingText || 'គ្មាន'}
+
+នេះជាភារកិច្ចដែលបានបង្ហើយថ្មីៗ៖
+${completedText || 'គ្មាន'}
+
+សេចក្តីណែនាំសំខាន់៖
+សូមសរសេររបាយការណ៍សង្ខេបអំពីវឌ្ឍនភាពការងារ និងផលិតភាពរបស់ខ្ញុំប្រកបដោយភាពកក់ក្តៅ លើកទឹកចិត្ត និងបែបសន្ទនាធម្មតា (កុំឲ្យលើសពី ៣ ទៅ ៤ ប្រយោគ)។ ផ្តល់អនុសាសន៍ជាក់លាក់មួយថាតើភារកិច្ច ឬគម្រោងណាដែលខ្ញុំគួរផ្តល់អាទិភាពបំផុតសម្រាប់ថ្ងៃនេះ។
+ចម្លើយទាំងមូលត្រូវតែសរសេរជាភាសាខ្មែរ (Khmer Language) ដ៏មានវិជ្ជាជីវៈ និងត្រឹមត្រូវទាំងស្រុង។ ហាមដាច់ខាតមិនត្រូវបញ្ចូលភាសាអង់គ្លេសមកជាមួយឡើយ។ កុំប្រើបញ្ជីរាយនាម (lists) សញ្ញាផ្កាយ (*) ឬពាក្យផ្តើមផ្សេងៗឡើយ។`;
+      } else {
+        const pendingText = tasks
+          .filter(t => t.status === 'Pending')
+          .slice(0, 10)
+          .map(t => `- ${t.task} [${t.priority} priority] (due ${t.date || t.month})`)
+          .join('\n');
+
+        const completedText = tasks
+          .filter(t => t.status === 'Completed')
+          .slice(0, 10)
+          .map(t => `- ${t.task}`)
+          .join('\n');
+
+        prompt = `Review my current productivity status.
 Here are my pending tasks:
 ${pendingText || 'None'}
 
 Here are some of my recently completed tasks:
 ${completedText || 'None'}
 
-Please write a warm, encouraging, conversational summary report (3-4 sentences maximum). Offer one specific suggestion on what task or project to prioritize today. Provide output in plain text, do not use lists, asterisks or preamble.
-${reportLang === 'km-KH' ? 'CRITICAL: The entire final report MUST be written in natural, fluent, professional Khmer language (ភាសាខ្មែរ). Do not include any English translations.' : ''}`;
+Please write a warm, encouraging, conversational summary report (3-4 sentences maximum). Offer one specific suggestion on what task or project to prioritize today. Provide output in plain text, do not use lists, asterisks or preamble.`;
+      }
 
       const response = await callGeminiProxy(prompt);
       if (response) {

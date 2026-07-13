@@ -250,7 +250,14 @@ Text to parse: "${aiInput}"`;
     if (!taskName.trim()) return;
     setAiDescLoading(true);
     try {
-      const prompt = `Write a concise, professional task description (1-2 sentences) for a ${priority} priority ${type} task titled "${taskName}". Do not copy the title. Plain text output only, no quotes, no conversational filler.`;
+      let prompt = '';
+      if (speechLang === 'km-KH') {
+        const priorityKh = priority === 'High' ? 'ខ្ពស់' : priority === 'Medium' ? 'មធ្យម' : 'ទាប';
+        const typeKh = type === 'daily' ? 'ប្រចាំថ្ងៃ' : type === 'monthly' ? 'ប្រចាំខែ' : 'ប្រចាំឆ្នាំ';
+        prompt = `សូមសរសេរការពិពណ៌នាភារកិច្ចឱ្យបានសង្ខេប និងមានលក្ខណៈវិជ្ជាជីវៈ (១ ទៅ ២ ប្រយោគ) សម្រាប់ភារកិច្ចកម្រិតអាទិភាព ${priorityKh} ប្រភេទ ${typeKh} ដែលមានចំណងជើងថា "${taskName}"។ កុំចម្លងចំណងជើងឡើងវិញ។ ចម្លើយទាំងមូលត្រូវតែសរសេរជាភាសាខ្មែរ (Khmer language) ដ៏ត្រឹមត្រូវ និងទាក់ទាញ។ ហាមដាច់ខាតមិនត្រូវបញ្ចូលភាសាអង់គ្លេសឡើយ។ ផ្តល់តែអត្ថបទពិពណ៌នាសុទ្ធសាធ (plain text) គ្មានសញ្ញាសម្រង់ ឬពាក្យផ្តើមឡើយ។`;
+      } else {
+        prompt = `Write a concise, professional task description (1-2 sentences) for a ${priority} priority ${type} task titled "${taskName}". Do not copy the title. Plain text output only, no quotes, no conversational filler.`;
+      }
       const response = await callGeminiProxy(prompt);
       if (response) {
         setDescription(response.trim());
@@ -313,7 +320,7 @@ Text to parse: "${aiInput}"`;
             value={taskName}
             onChange={(e) => setTaskName(e.target.value)}
             placeholder="What needs to be done?" 
-            className="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg dark:bg-[#0c1a30] dark:border-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-gold-500 text-sm"
+            className={`w-full px-3.5 py-2.5 border border-gray-200 rounded-lg dark:bg-[#0c1a30] dark:border-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-gold-500 text-sm ${speechLang === 'km-KH' ? 'font-khmer' : ''}`}
           />
         </div>
 
@@ -388,7 +395,7 @@ Text to parse: "${aiInput}"`;
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Enter task context, milestones or checklist items..." 
-            className="w-full px-3.5 py-2 border border-gray-200 rounded-lg dark:bg-[#0c1a30] dark:border-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-gold-500 text-xs resize-none"
+            className={`w-full px-3.5 py-2 border border-gray-200 rounded-lg dark:bg-[#0c1a30] dark:border-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-gold-500 text-xs resize-none ${speechLang === 'km-KH' ? 'font-khmer' : ''}`}
           />
         </div>
 
