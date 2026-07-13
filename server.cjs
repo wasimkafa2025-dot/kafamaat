@@ -98,7 +98,14 @@ async function startServer() {
         });
         return;
       }
-      const ai = new import_genai.GoogleGenAI({ apiKey });
+      const ai = new import_genai.GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            "User-Agent": "aistudio-build"
+          }
+        }
+      });
       const config = {};
       if (systemInstruction) {
         config.systemInstruction = systemInstruction;
@@ -107,12 +114,29 @@ async function startServer() {
         config.responseMimeType = "application/json";
         config.responseSchema = jsonSchema;
       }
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: prompt,
-        config
-      });
-      res.json({ text: response.text });
+      const modelsToTry = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-2.5-pro", "gemini-1.5-pro"];
+      let lastError = null;
+      let responseText = "";
+      let success = false;
+      for (const model of modelsToTry) {
+        try {
+          const response = await ai.models.generateContent({
+            model,
+            contents: prompt,
+            config
+          });
+          responseText = response.text || "";
+          success = true;
+          break;
+        } catch (err) {
+          console.warn(`Gemini API calling error for model ${model}:`, err);
+          lastError = err;
+        }
+      }
+      if (!success) {
+        throw lastError || new Error("All fallback models failed to generate content.");
+      }
+      res.json({ text: responseText });
     } catch (error) {
       console.error("Gemini AI API calling error:", error);
       res.status(500).json({ error: error.message || "Generative request failed" });
