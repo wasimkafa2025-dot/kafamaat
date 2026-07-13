@@ -35,12 +35,24 @@ async function startServer() {
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
   });
+  const sentTaskIds = /* @__PURE__ */ new Set();
   app.post("/api/telegram/send", async (req, res) => {
     try {
-      const { text } = req.body;
+      const { text, taskId } = req.body;
       if (!text) {
         res.status(400).json({ error: "Missing message text" });
         return;
+      }
+      if (taskId) {
+        if (sentTaskIds.has(taskId)) {
+          console.log(`[Deduplication] Blocked duplicate Telegram alert for task ID: ${taskId}`);
+          res.json({ success: true, duplicated: true });
+          return;
+        }
+        sentTaskIds.add(taskId);
+        setTimeout(() => {
+          sentTaskIds.delete(taskId);
+        }, 60 * 60 * 1e3);
       }
       const telegramUrl = `https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`;
       const response = await fetch(telegramUrl, {
@@ -55,6 +67,9 @@ async function startServer() {
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Telegram API response failed:", errorText);
+        if (taskId) {
+          sentTaskIds.delete(taskId);
+        }
         res.status(502).json({ error: "Telegram API failed", details: errorText });
         return;
       }
@@ -62,6 +77,9 @@ async function startServer() {
       res.json({ success: true, result });
     } catch (error) {
       console.error("Error sending message to Telegram:", error);
+      if (req.body.taskId) {
+        sentTaskIds.delete(req.body.taskId);
+      }
       res.status(500).json({ error: error.message || "Failed to send message" });
     }
   });
