@@ -907,6 +907,29 @@ export default function App() {
     }
   };
 
+  const handleUpdateTaskDate = async (id: string, newDate: string) => {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+
+    const updated: Task = {
+      ...task,
+      date: newDate,
+    };
+
+    // Update local state and localStorage immediately
+    const updatedTasks = tasks.map(t => t.id === id ? updated : t);
+    setTasks(updatedTasks);
+    localStorage.setItem(`taskflow_tasks_${currentUser}`, JSON.stringify(updatedTasks));
+
+    try {
+      const db = getActiveDb();
+      await setDoc(doc(db, "tasks", id), updated);
+      logActivity(`Rescheduled task "${task.task}" to ${newDate}`);
+    } catch (e) {
+      console.warn("Firestore update failed, using local/offline storage:", e);
+    }
+  };
+
   const handleDeleteTask = async (id: string) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
@@ -1758,7 +1781,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
                 ${activeView === 'calendar' ? 'active text-[#C59B27]' : 'text-gray-600 dark:text-gray-300'}`}
             >
               <CalendarIcon className="w-4.5 h-4.5 shrink-0 text-[#C59B27]" />
-              {!sidebarCollapsed && <span>Lunar Calendar</span>}
+              {!sidebarCollapsed && <span>Task Calendar</span>}
             </button>
 
             <button 
@@ -1871,7 +1894,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
               <span id="header-date" className="text-sm font-semibold text-gray-800 dark:text-gold-500">
                 {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
               </span>
-              <span id="header-khmer-date" className="text-[10px] text-[#C59B27] font-medium tracking-wide mt-0.5 font-khmer">
+              <span id="header-khmer-date" className="text-[12px] text-[#C59B27] font-medium tracking-wide mt-0.5 font-khmer">
                 {liveKhmerDate}
               </span>
             </div>
@@ -2437,6 +2460,7 @@ Keep answers clear, highly conversational (2-3 sentences max) and encouraging. A
                   const t = tasks.find(item => item.id === id);
                   if (t) setDetailModalTask(t);
                 }}
+                onUpdateTaskDate={handleUpdateTaskDate}
               />
             </div>
           )}

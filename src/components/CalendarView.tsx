@@ -7,16 +7,19 @@ interface CalendarViewProps {
   onToggleComplete: (id: string) => void;
   onOpenQuickAdd: (type: 'daily' | 'monthly' | 'yearly', date?: string) => void;
   onTaskClick: (id: string) => void;
+  onUpdateTaskDate: (id: string, date: string) => void;
 }
 
 export const CalendarView: React.FC<CalendarViewProps> = ({
   tasks,
   onToggleComplete,
   onOpenQuickAdd,
-  onTaskClick
+  onTaskClick,
+  onUpdateTaskDate
 }) => {
   const [calendarDate, setCalendarDate] = useState<Date>(new Date());
   const [viewType, setViewType] = useState<'month' | 'week' | 'day'>('month');
+  const [draggedOverDate, setDraggedOverDate] = useState<string | null>(null);
 
   const monthNames = [
     "January", "February", "March", "April", "May", "June", 
@@ -111,6 +114,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     for (let day = 1; day <= totalDays; day++) {
       const dayDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const isToday = dayDateStr === todayStr;
+      const isDraggedOver = draggedOverDate === dayDateStr;
 
       const dayTasks = tasks.filter(t => t.date === dayDateStr);
 
@@ -118,8 +122,34 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         <div 
           key={`day-${day}`} 
           onClick={() => onOpenQuickAdd('daily', dayDateStr)}
-          className={`calendar-day-cell p-1.5 rounded-lg border border-gray-200/50 dark:border-slate-800 flex flex-col justify-between overflow-hidden cursor-pointer h-full transition-colors hover:bg-gold-500/5
-            ${isToday ? 'calendar-day-today bg-gold-500/5 dark:bg-gold-500/10' : ''}`}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+          }}
+          onDragEnter={(e) => {
+            e.preventDefault();
+            setDraggedOverDate(dayDateStr);
+          }}
+          onDragLeave={() => {
+            if (draggedOverDate === dayDateStr) {
+              setDraggedOverDate(null);
+            }
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDraggedOverDate(null);
+            const taskId = e.dataTransfer.getData('text/plain');
+            if (taskId) {
+              onUpdateTaskDate(taskId, dayDateStr);
+            }
+          }}
+          className={`calendar-day-cell p-1.5 rounded-lg border flex flex-col justify-between overflow-hidden cursor-pointer h-full transition-all duration-200
+            ${isDraggedOver 
+              ? 'border-gold-500 bg-gold-500/10 dark:bg-gold-500/20 scale-[0.98]' 
+              : isToday 
+                ? 'calendar-day-today bg-gold-500/5 dark:bg-gold-500/10 border-gold-500/30' 
+                : 'border-gray-200/50 dark:border-slate-800 hover:bg-gold-500/5'
+            }`}
         >
           <div className="flex justify-between items-center w-full font-mono text-xs">
             <span className={`font-bold ${isToday ? 'text-gold-600 dark:text-gold-500' : 'text-gray-700 dark:text-white'}`}>{day}</span>
@@ -130,23 +160,29 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             <div className="space-y-0.5 max-h-12 overflow-y-auto w-full mt-1">
               {dayTasks.slice(0, 3).map((t, idx) => {
                 const isComp = t.status === 'Completed';
-                let badgeCol = 'bg-emerald-500 text-white';
+                let badgeCol = 'bg-emerald-50/70 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200/40 dark:border-emerald-900/30';
                 if (isComp) {
-                  badgeCol = 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 line-through underline';
+                  badgeCol = 'bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-gray-500 line-through border border-gray-200/40 dark:border-slate-700/50';
                 } else if (t.priority === 'High') {
-                  badgeCol = 'bg-red-500 text-white';
+                  badgeCol = 'bg-red-50/80 dark:bg-red-950/30 text-red-700 dark:text-red-300 border border-red-200/50 dark:border-red-900/30';
                 } else if (t.priority === 'Medium') {
-                  badgeCol = 'bg-orange-400 text-white';
+                  badgeCol = 'bg-amber-50/80 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border border-amber-200/50 dark:border-amber-900/30';
                 }
                 
                 return (
                   <div 
                     key={idx} 
+                    draggable={true}
+                    onDragStart={(e) => {
+                      e.stopPropagation();
+                      e.dataTransfer.setData('text/plain', t.id);
+                      e.dataTransfer.effectAllowed = 'move';
+                    }}
                     onClick={(e) => {
                       e.stopPropagation();
                       onTaskClick(t.id);
                     }}
-                    className={`text-[8px] font-semibold px-1 rounded truncate tracking-tight py-0.5 hover:opacity-85 ${badgeCol}`}
+                    className={`text-[8px] font-semibold px-1 rounded truncate tracking-tight py-0.5 hover:opacity-85 cursor-grab active:cursor-grabbing ${badgeCol}`}
                   >
                     {t.task}
                   </div>
@@ -178,6 +214,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       currentDay.setDate(startOfWeek.getDate() + i);
       const dayDateStr = formatDateStr(currentDay);
       const isToday = dayDateStr === todayStr;
+      const isDraggedOver = draggedOverDate === dayDateStr;
 
       const dayTasks = tasks.filter(t => t.date === dayDateStr);
 
@@ -185,8 +222,34 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         <div 
           key={`week-${i}`}
           onClick={() => onOpenQuickAdd('daily', dayDateStr)}
-          className={`calendar-day-cell p-3 rounded-xl border border-gray-200/50 dark:border-slate-800 flex flex-col h-full min-h-[300px] cursor-pointer hover:bg-gold-500/5 transition-colors
-            ${isToday ? 'calendar-day-today bg-gold-500/5 dark:bg-gold-500/10' : ''}`}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+          }}
+          onDragEnter={(e) => {
+            e.preventDefault();
+            setDraggedOverDate(dayDateStr);
+          }}
+          onDragLeave={() => {
+            if (draggedOverDate === dayDateStr) {
+              setDraggedOverDate(null);
+            }
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDraggedOverDate(null);
+            const taskId = e.dataTransfer.getData('text/plain');
+            if (taskId) {
+              onUpdateTaskDate(taskId, dayDateStr);
+            }
+          }}
+          className={`calendar-day-cell p-3 rounded-xl border flex flex-col h-full min-h-[300px] cursor-pointer transition-all duration-200
+            ${isDraggedOver 
+              ? 'border-gold-500 bg-gold-500/10 dark:bg-gold-500/20 scale-[0.98]' 
+              : isToday 
+                ? 'calendar-day-today bg-gold-500/5 dark:bg-gold-500/10 border-gold-500/30' 
+                : 'border-gray-200/50 dark:border-slate-800 hover:bg-gold-500/5'
+            }`}
         >
           <div className="text-center border-b border-gray-100 dark:border-slate-800 pb-2 mb-3">
             <h5 className="text-[10px] font-mono text-gray-400 uppercase font-bold">{currentDay.toLocaleString('en-US', { weekday: 'short' })}</h5>
@@ -196,18 +259,33 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           <div className="space-y-2 flex-1 overflow-y-auto pr-0.5">
             {dayTasks.map((t, idx) => {
               const isComp = t.status === 'Completed';
-              const pCol = t.priority === 'High' ? 'border-red-500' : t.priority === 'Medium' ? 'border-orange-400' : 'border-emerald-500';
+              let cardStyles = '';
+              if (isComp) {
+                cardStyles = 'border-l-2 border-gray-300 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-900/30 text-gray-400 dark:text-gray-500 opacity-60 line-through';
+              } else if (t.priority === 'High') {
+                cardStyles = 'border-l-2 border-red-500 bg-red-50/60 dark:bg-red-950/20 text-red-900 dark:text-red-100';
+              } else if (t.priority === 'Medium') {
+                cardStyles = 'border-l-2 border-amber-500 bg-amber-50/60 dark:bg-amber-950/20 text-amber-900 dark:text-amber-100';
+              } else {
+                cardStyles = 'border-l-2 border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/20 text-emerald-900 dark:text-emerald-100';
+              }
               return (
                 <div 
                   key={idx}
+                  draggable={true}
+                  onDragStart={(e) => {
+                    e.stopPropagation();
+                    e.dataTransfer.setData('text/plain', t.id);
+                    e.dataTransfer.effectAllowed = 'move';
+                  }}
                   onClick={(e) => {
                     e.stopPropagation();
                     onTaskClick(t.id);
                   }}
-                  className={`p-2 border-l-2 bg-white dark:bg-slate-900 rounded shadow-sm text-[10px] ${pCol} ${isComp ? 'opacity-50 line-through underline' : ''}`}
+                  className={`p-2 rounded shadow-sm text-[10px] ${cardStyles} cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow duration-200`}
                 >
-                  <p className="font-bold text-gray-700 dark:text-white truncate">{t.task}</p>
-                  <p className="text-[8px] font-mono text-gray-400 mt-0.5">{t.time}</p>
+                  <p className="font-bold truncate">{t.task}</p>
+                  <p className="text-[8px] font-mono opacity-70 mt-0.5">{t.time}</p>
                 </div>
               );
             })}
@@ -240,15 +318,25 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       <div className="space-y-3 max-h-[400px] overflow-y-auto p-2">
         {dayTasks.map((t, idx) => {
           const isComp = t.status === 'Completed';
+          let dayCardStyles = '';
+          if (isComp) {
+            dayCardStyles = 'bg-gray-50/50 dark:bg-slate-900/30 border-gray-200/40 dark:border-slate-800 text-gray-400 dark:text-gray-500';
+          } else if (t.priority === 'High') {
+            dayCardStyles = 'bg-red-50/50 dark:bg-red-950/10 border-red-200/50 dark:border-red-900/30 text-red-900 dark:text-red-100';
+          } else if (t.priority === 'Medium') {
+            dayCardStyles = 'bg-amber-50/50 dark:bg-amber-950/10 border-amber-200/50 dark:border-amber-900/30 text-amber-900 dark:text-amber-100';
+          } else {
+            dayCardStyles = 'bg-emerald-50/50 dark:bg-emerald-950/10 border-emerald-200/50 dark:border-emerald-900/30 text-emerald-900 dark:text-emerald-100';
+          }
           return (
             <div 
               key={idx}
               onClick={() => onTaskClick(t.id)}
-              className="p-3 bg-gray-50 dark:bg-slate-900 hover:scale-[1.01] transition-transform rounded-xl border border-gray-200/50 dark:border-slate-800 flex justify-between items-center cursor-pointer"
+              className={`p-3 hover:scale-[1.01] transition-transform rounded-xl border flex justify-between items-center cursor-pointer ${dayCardStyles}`}
             >
               <div>
-                <h4 className={`font-bold text-sm text-gray-800 dark:text-white truncate ${isComp ? 'line-through underline opacity-50' : ''}`}>{t.task}</h4>
-                <p className="text-xs text-gray-400 font-mono mt-0.5">{t.time} | {t.priority} Priority</p>
+                <h4 className={`font-bold text-sm truncate ${isComp ? 'line-through underline opacity-60' : ''}`}>{t.task}</h4>
+                <p className="text-xs font-mono mt-0.5 opacity-70">{t.time} | {t.priority} Priority</p>
               </div>
               <button 
                 onClick={(e) => {
@@ -275,8 +363,18 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             <h3 className="font-display font-bold text-xl text-gray-800 dark:text-gold-500">
               {monthNames[calendarDate.getMonth()]} {calendarDate.getFullYear()}
             </h3>
-            <p className="text-xs text-gray-400 font-mono">
-              Khmer: {getKhmerLunarDate(calendarDate)}
+            <p className="text-xs text-gray-400 font-mono flex items-center gap-1.5 flex-wrap">
+              <span>Khmer: <span className="font-khmer text-[13px] text-gray-800 dark:text-gold-300 font-medium tracking-wide">{getKhmerLunarDate(calendarDate)}</span></span>
+              <span className="text-gray-300 dark:text-slate-700">|</span>
+              <a 
+                href="https://khmer-lunar-calendar.com/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-[#C59B27] hover:text-[#b0871e] hover:underline inline-flex items-center gap-1 font-semibold"
+              >
+                Khmer Lunar Calendar
+                <span className="material-icons text-[10px]">open_in_new</span>
+              </a>
             </p>
           </div>
         </div>
