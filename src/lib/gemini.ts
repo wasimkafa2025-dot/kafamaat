@@ -46,7 +46,7 @@ export async function callGeminiProxy(prompt: string, options: { systemInstructi
     }
   }
 
-  const models = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
+  const models = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-2.5-pro", "gemini-1.5-pro"];
   let lastError: any = null;
 
   for (const model of models) {
